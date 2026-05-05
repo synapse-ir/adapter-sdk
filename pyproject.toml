@@ -1,0 +1,23 @@
+[project]
+name = "synapse-adapter-sdk"
+version = "0.1.0"
+description = "Adapter SDK for the SYNAPSE canonical IR ecosystem"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "mypy",
+    "ruff",
+]
+
+[project.scripts]
+synapse-validate = "synapse_sdk.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
