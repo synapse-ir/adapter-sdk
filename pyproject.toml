@@ -28,4 +28,6 @@ packages = ["src/synapse_sdk"]
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    "torch>=2.11.0",
+    "transformers>=5.8.0",
 ]
