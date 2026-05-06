@@ -211,23 +211,65 @@ class AdapterValidator:
         validator = AdapterValidator(MyAdapter())
         result = validator.run()
         validator.assert_valid()   # raises AdapterValidationError if MUST rules fail
+
+    Pass a fixture list to run behavioral rules against multiple IRs::
+
+        from synapse_sdk.testing.fixtures import ALL_FIXTURES
+        validator = AdapterValidator(MyAdapter(), fixtures=ALL_FIXTURES)
+        result = validator.run()
     """
 
-    def __init__(self, adapter: "AdapterBase") -> None:
+    def __init__(
+        self,
+        adapter: "AdapterBase",
+        fixtures: "list[CanonicalIR] | None" = None,
+    ) -> None:
         self._adapter = adapter
+        self._fixtures: list[CanonicalIR] = fixtures if fixtures is not None else []
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
     def run(self) -> AdapterValidationResult:
-        """Execute all 13 rules and return a consolidated result."""
+        """Execute all 13 rules and return a consolidated result.
+
+        Behavioral rules (1–6, 8–9, 11–13) run once per fixture; static rules
+        (7, 10) run once regardless of fixture count.  When no fixtures were
+        passed to __init__(), a single built-in minimal fixture is used.
+        """
         errors:   list[ValidationFailure] = []
         warnings: list[ValidationFailure] = []
 
-        fixture = _minimal_ir()
+        # Static rules — independent of any fixture
+        r7 = self._rule_no_network_calls()
+        if r7: errors.append(r7)
 
-        # -- Run ingress once; keep result for downstream rules ----------
+        r10 = self._rule_version_semver()
+        if r10: errors.append(r10)
+
+        # Behavioural rules — run per fixture
+        fixtures = self._fixtures or [_minimal_ir()]
+        for fixture in fixtures:
+            f_errors, f_warnings = self._run_fixture(fixture)
+            errors.extend(f_errors)
+            warnings.extend(f_warnings)
+
+        passed = len(errors) == 0
+        return AdapterValidationResult(passed=passed, errors=errors, warnings=warnings)
+
+    # ------------------------------------------------------------------
+    # Per-fixture behavioural runner
+    # ------------------------------------------------------------------
+
+    def _run_fixture(
+        self, fixture: CanonicalIR
+    ) -> "tuple[list[ValidationFailure], list[ValidationFailure]]":
+        """Run all behavioural rules against a single fixture IR."""
+        errors:   list[ValidationFailure] = []
+        warnings: list[ValidationFailure] = []
+
+        # -- Run ingress; keep result for downstream rules ---------------
         ingress_output: Any = None
         ingress_ok = False
         try:
@@ -247,7 +289,7 @@ class AdapterValidator:
         _r1 = self._rule_ingress_not_null(ingress_output, ingress_ok)
         if _r1: errors.append(_r1)
 
-        # -- Run egress once; keep result for downstream rules -----------
+        # -- Run egress; keep result for downstream rules ----------------
         egress_output: Any = None
         egress_ir: CanonicalIR | None = None
         egress_raised = False
@@ -308,16 +350,7 @@ class AdapterValidator:
             r13 = self._rule_content_preserved(fixture, egress_ir)
             if r13: warnings.append(r13)
 
-        # Rule 7 — static AST scan, independent of runtime
-        r7 = self._rule_no_network_calls()
-        if r7: errors.append(r7)
-
-        # Rule 10 — static check on class attribute
-        r10 = self._rule_version_semver()
-        if r10: errors.append(r10)
-
-        passed = len(errors) == 0
-        return AdapterValidationResult(passed=passed, errors=errors, warnings=warnings)
+        return errors, warnings
 
     def assert_valid(self) -> None:
         """Run validation and raise AdapterValidationError if any MUST rule fails."""
