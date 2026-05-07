@@ -1,5 +1,29 @@
 """synapse_sdk.testing — convenience re-exports for test/CI usage (§2.2.4, §9 G-S06)."""
 
+from synapse_sdk.testing.fixtures import (
+    ALL_FIXTURES,
+    BINARY_PAYLOAD,
+    EMPTY_COMPLIANCE,
+    FINANCE_GENERATE_SOX,
+    FIXTURE_NAMES,
+    FULL_COMPLIANCE,
+    GENERAL_EMBED_LARGE,
+    LEGAL_EXTRACT_BASIC,
+    LEGAL_EXTRACT_PII,
+    MAX_PROVENANCE_CHAIN,
+    MEDICAL_CLASSIFY_HIPAA,
+    MINIMAL_VALID_IR,
+    MULTILINGUAL_TRANSLATE,
+    PARTIAL_FAILURE_POLICY,
+    RANK_WITH_PRIOR_PROVENANCE,
+    SCORE_TASK,
+    SESSION_WITH_CONTEXT_REF,
+    STRUCTURED_PAYLOAD,
+    TIGHT_LATENCY_BUDGET,
+    TRACE_CONTEXT_SET,
+    VALIDATE_TASK,
+    ZERO_LATENCY_BUDGET,
+)
 from synapse_sdk.validator import (
     AdapterValidationError,
     AdapterValidationResult,
@@ -9,6 +33,30 @@ from synapse_sdk.validator import (
 )
 
 __all__ = [
+    # fixtures
+    "ALL_FIXTURES",
+    "BINARY_PAYLOAD",
+    "EMPTY_COMPLIANCE",
+    "FINANCE_GENERATE_SOX",
+    "FIXTURE_NAMES",
+    "FULL_COMPLIANCE",
+    "GENERAL_EMBED_LARGE",
+    "LEGAL_EXTRACT_BASIC",
+    "LEGAL_EXTRACT_PII",
+    "MAX_PROVENANCE_CHAIN",
+    "MEDICAL_CLASSIFY_HIPAA",
+    "MINIMAL_VALID_IR",
+    "MULTILINGUAL_TRANSLATE",
+    "PARTIAL_FAILURE_POLICY",
+    "RANK_WITH_PRIOR_PROVENANCE",
+    "SCORE_TASK",
+    "SESSION_WITH_CONTEXT_REF",
+    "STRUCTURED_PAYLOAD",
+    "TIGHT_LATENCY_BUDGET",
+    "TRACE_CONTEXT_SET",
+    "VALIDATE_TASK",
+    "ZERO_LATENCY_BUDGET",
+    # validator
     "AdapterValidationError",
     "AdapterValidationResult",
     "AdapterValidator",

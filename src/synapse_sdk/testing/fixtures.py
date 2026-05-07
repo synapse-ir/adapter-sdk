@@ -20,10 +20,12 @@ from synapse_sdk.types import (
     CanonicalIR,
     ComplianceEnvelope,
     Domain,
+    FailurePolicy,
     Payload,
     ProvenanceEntry,
     TaskHeader,
     TaskType,
+    TraceContext,
 )
 
 # ---------------------------------------------------------------------------
@@ -603,10 +605,10 @@ PARTIAL_FAILURE_POLICY = CanonicalIR(
     message_id=_IDS[17],
     task_header=TaskHeader(
         task_type=TaskType.extract,
-        domain=Domain.general,
+        domain=Domain.legal,
         priority=2,
         latency_budget_ms=1000,
-        session_id="failure-policy:partial",
+        failure_policy=FailurePolicy.partial,
     ),
     payload=Payload(
         modality="text",
@@ -616,12 +618,12 @@ PARTIAL_FAILURE_POLICY = CanonicalIR(
         ),
     ),
 )
-"""Partial-failure semantics encoded in session_id.
+"""failure_policy=partial in task_header.
 
-Edge case: tests failure policy propagation. The failure_policy field is not
-yet in the §1 IR schema (planned for v1.1); session_id carries the policy
-intent ('failure-policy:partial') so adapters can be tested now. Adapters
-must carry session_id through egress unchanged.
+Edge case: tests failure policy propagation through the adapter cycle.
+Adapters must carry task_header.failure_policy through egress unchanged;
+the pipeline runner reads it to decide whether to raise or return a
+PartialCompletionResponse when a stage fails.
 """
 
 
@@ -629,30 +631,29 @@ must carry session_id through egress unchanged.
 # 19. TRACE_CONTEXT_SET
 # ---------------------------------------------------------------------------
 
-# W3C traceparent: version=00, trace-id, parent-id, flags=01
+# W3C traceparent: version=00, trace-id (32 hex), parent-id (16 hex), flags=01
 _TRACEPARENT = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 
 TRACE_CONTEXT_SET = CanonicalIR(
     ir_version="1.0.0",
     message_id=_IDS[18],
     task_header=TaskHeader(
-        task_type=TaskType.generate,
-        domain=Domain.general,
+        task_type=TaskType.extract,
+        domain=Domain.legal,
         priority=2,
         latency_budget_ms=500,
-        idempotency_key=_TRACEPARENT,
+        trace_context=TraceContext(traceparent=_TRACEPARENT),
     ),
     payload=Payload(
         modality="text",
-        content="Generate a summary for distributed trace context propagation testing.",
+        content="Extract clauses for distributed trace context propagation testing.",
     ),
 )
-"""W3C traceparent stored in idempotency_key.
+"""trace_context.traceparent set — tests W3C trace context propagation.
 
-Edge case: tests trace context propagation. The trace_context field is not
-yet in the §1 IR schema (planned for v1.1); idempotency_key carries the
-W3C traceparent so adapters can be tested now. Adapters must carry
-idempotency_key through egress unchanged.
+Edge case: adapters must read task_header.trace_context and propagate the
+traceparent into their outbound span so distributed tracing works end-to-end.
+Adapters must not strip or overwrite trace_context in egress.
 """
 
 
