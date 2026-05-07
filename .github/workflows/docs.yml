@@ -10,8 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.DOCS_DEPLOY_TOKEN }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install mkdocs-material mkdocstrings[python] mkdocs-autorefs
-      - run: mkdocs gh-deploy --force
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdocs gh-deploy --force --remote-name origin
