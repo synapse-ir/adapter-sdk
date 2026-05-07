@@ -1,3 +1,7 @@
+## 0.1.1 — May 2026
+- Added complete PyPI project metadata (keywords, classifiers, URLs)
+- No functional changes
+
 ## 0.1.0 — May 2026
 
 - Initial public release

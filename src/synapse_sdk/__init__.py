@@ -1,6 +1,6 @@
 """synapse-adapter-sdk public API."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from synapse_sdk.base import AdapterBase, AdapterConfigurationError
 from synapse_sdk.cache import (
