@@ -1,0 +1,48 @@
+site_name: SYNAPSE Adapter SDK
+site_url: https://synapse-ir.github.io/adapter-sdk
+site_description: The intelligence layer above the AI protocol layer
+repo_url: https://github.com/synapse-ir/adapter-sdk
+repo_name: synapse-ir/adapter-sdk
+
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: teal
+  features:
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - First Adapter: getting-started/first-adapter.md
+    - Validation: getting-started/validation.md
+  - Reference:
+    - Canonical IR: reference/canonical-ir.md
+    - AdapterBase: reference/adapter-base.md
+    - AdapterValidator: reference/validator.md
+    - Cache Layers: reference/caches.md
+  - Adapters:
+    - Available Adapters: adapters/index.md
+    - NER BERT: adapters/ner-bert.md
+  - Specification: https://github.com/synapse-ir/spec
+  - Contributing: https://github.com/synapse-ir/adapter-sdk/blob/main/DECISIONS.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - admonition
+  - toc:
+      permalink: true

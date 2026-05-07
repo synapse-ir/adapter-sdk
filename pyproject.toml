@@ -50,5 +50,8 @@ packages = ["src/synapse_sdk"]
 
 [dependency-groups]
 dev = [
+    "mkdocs-autorefs>=1.4.4",
+    "mkdocs-material>=9.7.6",
+    "mkdocstrings[python]>=1.0.4",
     "pytest>=9.0.3",
 ]
