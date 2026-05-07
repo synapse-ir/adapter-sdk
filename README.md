@@ -1,5 +1,7 @@
 # SYNAPSE Adapter SDK
 
+SYNAPSE is a canonical intermediate representation (IR) protocol that lets AI models with incompatible schemas interoperate through a unified adapter interface.
+
 Write **two functions** — connect your AI model to every other model in the ecosystem.
 
 Without SYNAPSE: 4 models require 6 custom connectors. 10 models require 45.
