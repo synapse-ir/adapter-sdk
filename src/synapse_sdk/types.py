@@ -104,6 +104,30 @@ class Domain(StrEnum):
     conversational = "conversational"
 
 
+class FailurePolicy(StrEnum):
+    """Pipeline failure semantics — added in §9 G-S02.
+
+    abort    (default) — any stage failure aborts the pipeline.
+    partial  — failed stages are skipped; returns PartialCompletionResponse.
+    fallback — tries fallback model from slot assignment before partial.
+    """
+    abort    = "abort"
+    partial  = "partial"
+    fallback = "fallback"
+
+
+class BranchRole(StrEnum):
+    """Role of a ProvenanceEntry in a parallel pipeline — §9 G-S03.
+
+    Sequential pipelines leave branch_id / branch_role absent.
+    Phase 2 fan-out/fan-in will populate these fields; the flat-array
+    provenance design means no IR version bump is required.
+    """
+    source = "source"   # stage that initiated the fan-out
+    branch = "branch"   # a parallel branch stage
+    merge  = "merge"    # stage that aggregated branch results
+
+
 # ---------------------------------------------------------------------------
 # Null-byte guard (G-C08)
 # ---------------------------------------------------------------------------
@@ -119,6 +143,48 @@ def _reject_null_bytes(value: str, field: str) -> None:
 # Sub-models
 # ---------------------------------------------------------------------------
 
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+# W3C Trace Context traceparent: 00-{32hex}-{16hex}-{2hex}
+_TRACEPARENT_RE = re.compile(
+    r"^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$",
+    re.IGNORECASE,
+)
+
+
+class TraceContext(BaseModel):
+    """W3C Trace Context fields propagated through the IR — §9 G-S01.
+
+    Presence is optional. When absent, tracing.propagate_trace_context()
+    will synthesise a new root trace.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    traceparent: str
+    tracestate:  Optional[str] = None
+
+    @field_validator("traceparent", mode="before")
+    @classmethod
+    def _validate_traceparent(cls, v: str) -> str:
+        _reject_null_bytes(v, "trace_context.traceparent")
+        if not _TRACEPARENT_RE.match(v):
+            raise ValueError(
+                f"traceparent must be W3C format '00-{{trace_id}}-{{parent_id}}-{{flags}}', "
+                f"got {v!r}"
+            )
+        return v.lower()
+
+    @field_validator("tracestate", mode="before")
+    @classmethod
+    def _no_nulls_tracestate(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            _reject_null_bytes(v, "trace_context.tracestate")
+        return v
+
+
 class TaskHeader(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -130,6 +196,10 @@ class TaskHeader(BaseModel):
     quality_floor:     Optional[float] = Field(default=None, ge=0.0, le=1.0)
     session_id:        Optional[str]   = None
     idempotency_key:   Optional[str]   = None
+    # G-S01 — W3C Trace Context propagation
+    trace_context:     Optional[TraceContext] = None
+    # G-S02 — pipeline failure semantics ('abort' preserves current behaviour)
+    failure_policy:    FailurePolicy = FailurePolicy.abort
 
     @field_validator("session_id", "idempotency_key", mode="before")
     @classmethod
@@ -288,6 +358,9 @@ class ProvenanceEntry(BaseModel):
     cost_usd:        Optional[float] = None
     token_count:     Optional[int]   = None
     warnings:        Optional[list[str]] = None
+    # G-S03 — parallel branch anchor points (absent for sequential pipelines)
+    branch_id:       Optional[str]        = None
+    branch_role:     Optional[BranchRole] = None
 
     @field_validator("model_id", "adapter_version", mode="before")
     @classmethod
@@ -301,6 +374,16 @@ class ProvenanceEntry(BaseModel):
         if v is not None:
             for w in v:
                 _reject_null_bytes(w, "provenance.warnings[]")
+        return v
+
+    @field_validator("branch_id", mode="before")
+    @classmethod
+    def _validate_branch_id(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        _reject_null_bytes(v, "provenance.branch_id")
+        if not _UUID_RE.match(v):
+            raise ValueError(f"provenance.branch_id must be a UUID v4, got {v!r}")
         return v
 
 
@@ -333,12 +416,6 @@ class ComplianceEnvelope(BaseModel):
 # ---------------------------------------------------------------------------
 # Root IR model (§1.2)
 # ---------------------------------------------------------------------------
-
-_UUID_RE = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-    re.IGNORECASE,
-)
-
 
 class CanonicalIR(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -411,3 +488,40 @@ class CanonicalIR(BaseModel):
     def from_json(cls, data: str | bytes) -> "CanonicalIR":
         """Deserialize from JSON, running all validators."""
         return cls.model_validate_json(data)
+
+
+# ---------------------------------------------------------------------------
+# G-S02 — Partial pipeline failure response types (§9 G-S02)
+# ---------------------------------------------------------------------------
+
+class FailedStage(BaseModel):
+    """Describes a single pipeline stage that failed under failure_policy='partial'."""
+    model_config = ConfigDict(extra="forbid")
+
+    model_id:    str
+    error:       str
+    detail:      Optional[str] = None
+    stage_index: Optional[int] = Field(default=None, ge=0)
+
+    @field_validator("model_id", "error", mode="before")
+    @classmethod
+    def _no_nulls(cls, v: str, info) -> str:
+        _reject_null_bytes(v, f"failed_stage.{info.field_name}")
+        return v
+
+
+class PartialCompletionResponse(BaseModel):
+    """Returned when failure_policy='partial' and at least one stage failed.
+
+    completed_stages lists model_id values that succeeded.
+    failed_stages   lists FailedStage records for each failure.
+    payload         is the best available result from completed stages.
+    provenance      contains entries from completed stages only.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    partial_completion: bool = True
+    completed_stages:   list[str]
+    failed_stages:      list[FailedStage]
+    payload:            Payload
+    provenance:         list[ProvenanceEntry] = Field(default_factory=list)

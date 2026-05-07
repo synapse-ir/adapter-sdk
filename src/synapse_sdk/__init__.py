@@ -18,15 +18,21 @@ from synapse_sdk.cache import (
     S3ContextStore,
     make_context_store,
 )
+from synapse_sdk.tracing import adapter_span, make_child_traceparent, propagate_trace_context
 from synapse_sdk.types import (
+    BranchRole,
     CanonicalIR,
     ComplianceEnvelope,
     Domain,
     Entity,
+    FailedStage,
+    FailurePolicy,
+    PartialCompletionResponse,
     Payload,
     ProvenanceEntry,
     TaskHeader,
     TaskType,
+    TraceContext,
 )
 from synapse_sdk.validator import (
     AdapterValidationError,
@@ -41,14 +47,23 @@ __all__ = [
     "AdapterBase",
     "AdapterConfigurationError",
     # types
+    "BranchRole",
     "CanonicalIR",
     "ComplianceEnvelope",
     "Domain",
     "Entity",
+    "FailedStage",
+    "FailurePolicy",
+    "PartialCompletionResponse",
     "Payload",
     "ProvenanceEntry",
     "TaskHeader",
     "TaskType",
+    "TraceContext",
+    # tracing — G-S01
+    "adapter_span",
+    "make_child_traceparent",
+    "propagate_trace_context",
     # validator
     "AdapterValidationError",
     "AdapterValidationResult",
