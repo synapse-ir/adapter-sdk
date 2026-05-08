@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SYNAPSE — Live Pipeline Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0D1F35;--navy-mid:#152840;--navy-light:#1E3555;
+  --blue:#2E7DD4;--blue-bright:#4A9AEF;--blue-dim:#1A5FA8;
+  --teal:#1A9E7A;--teal-dim:#0F6E56;
+  --amber:#EF9F27;--coral:#D85A30;
+  --white:#F5F8FC;--muted:#8BA0B8;
+  --border:rgba(46,125,212,0.2);--border-bright:rgba(46,125,212,0.5);
+  --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;
+  --panel-bg:rgba(13,31,53,0.85);--code-bg:#0A1628;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--navy);color:var(--white);
+  font-family:var(--sans);font-size:15px;line-height:1.6;
+  min-height:100vh;overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(46,125,212,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(46,125,212,0.04) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;
+}
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 2rem}
+
+header{padding:3rem 0 2rem;text-align:center}
+.logo-mark{display:inline-flex;align-items:center;gap:.75rem;margin-bottom:1.5rem}
+.logo-sq{width:36px;height:36px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:14px;color:white}
+.logo-name{font-family:var(--mono);font-weight:600;font-size:18px;letter-spacing:.1em;color:var(--white)}
+h1{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:300;letter-spacing:-.02em;line-height:1.2;margin-bottom:1rem}
+h1 strong{font-weight:600;color:var(--blue-bright)}
+.subtitle{font-size:1rem;color:var(--muted);max-width:540px;margin:0 auto 2.5rem;line-height:1.7}
+
+.input-section{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:2.5rem;backdrop-filter:blur(8px)}
+.input-label{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.12em;color:var(--blue-bright);text-transform:uppercase;margin-bottom:.75rem;display:block}
+textarea{width:100%;background:var(--code-bg);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:var(--mono);font-size:12.5px;line-height:1.7;padding:1rem 1.25rem;resize:vertical;min-height:100px;transition:border-color .2s;outline:none}
+textarea:focus{border-color:var(--blue)}
+.run-btn{margin-top:1rem;display:inline-flex;align-items:center;gap:.6rem;background:var(--blue);color:white;border:none;border-radius:8px;padding:.75rem 1.75rem;font-family:var(--sans);font-size:15px;font-weight:500;cursor:pointer;transition:background .2s,transform .1s}
+.run-btn:hover{background:var(--blue-bright)}
+.run-btn:active{transform:scale(.98)}
+.run-btn:disabled{background:var(--navy-light);color:var(--muted);cursor:not-allowed;transform:none}
+.run-btn .arr{font-size:18px;transition:transform .2s}
+.run-btn:not(:disabled):hover .arr{transform:translateX(3px)}
+
+.stage-label{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;margin-bottom:1.5rem;color:var(--muted);display:flex;align-items:center;gap:1rem}
+.stage-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.hop{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+.hop.visible{opacity:1;transform:translateY(0)}
+
+.connector{display:flex;flex-direction:column;align-items:center;padding:.25rem 0;opacity:0;transition:opacity .4s ease}
+.connector.visible{opacity:1}
+.conn-line{width:2px;height:36px;background:linear-gradient(to bottom,var(--border-bright),var(--blue));position:relative}
+.conn-dot{width:8px;height:8px;background:var(--blue-bright);border-radius:50%;position:absolute;left:50%;transform:translateX(-50%);animation:pdot 1.5s ease-in-out infinite}
+@keyframes pdot{0%,100%{opacity:.4;transform:translateX(-50%) scale(.8)}50%{opacity:1;transform:translateX(-50%) scale(1.2)}}
+.conn-lbl{font-family:var(--mono);font-size:10px;color:var(--blue-bright);letter-spacing:.08em;opacity:.7;margin-top:4px}
+
+.model-card{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;backdrop-filter:blur(8px)}
+.model-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);background:rgba(21,40,64,.6)}
+.model-name-row{display:flex;align-items:center;gap:.75rem}
+.model-badge{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;padding:3px 8px;border-radius:4px;text-transform:uppercase}
+.badge-ner{background:rgba(26,158,122,.2);color:var(--teal);border:1px solid rgba(26,158,122,.3)}
+.badge-cls{background:rgba(46,125,212,.2);color:var(--blue-bright);border:1px solid rgba(46,125,212,.3)}
+.badge-scr{background:rgba(239,159,39,.2);color:var(--amber);border:1px solid rgba(239,159,39,.3)}
+.model-id{font-family:var(--mono);font-size:13px;color:var(--white)}
+.model-meta{font-size:12px;color:var(--muted)}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:6px;transition:background .3s}
+.sdot.active{background:var(--teal);box-shadow:0 0 6px rgba(26,158,122,.6);animation:pstat 1s ease-in-out infinite}
+.sdot.done{background:var(--teal)}
+@keyframes pstat{0%,100%{opacity:.7}50%{opacity:1}}
+
+.io-grid{display:grid;grid-template-columns:1fr 1fr}
+.io-panel{padding:1.25rem;border-right:1px solid var(--border)}
+.io-panel:last-child{border-right:none}
+.io-label{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.io-label .albl{color:var(--blue-bright);font-size:12px}
+
+pre{font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--white);background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:1rem;overflow-x:auto;white-space:pre;min-height:80px;opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease}
+pre.on{opacity:1;transform:translateY(0)}
+.k{color:#79C0FF}.s{color:#A5D6FF}.n{color:#FFA657}.b{color:#FF7B72}.c{color:#8B949E}.h{color:var(--teal);font-weight:500}
+
+.ir-panel{background:rgba(10,22,40,.9);border:1px solid rgba(26,158,122,.3);border-radius:12px;overflow:hidden;margin:.25rem 0}
+.ir-header{background:rgba(26,158,122,.1);border-bottom:1px solid rgba(26,158,122,.2);padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between}
+.ir-title{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+.ir-tag{font-family:var(--mono);font-size:10px;color:rgba(26,158,122,.7)}
+.ir-body{padding:1.25rem}
+.ir-body pre{background:transparent;border:none;padding:0}
+
+.ann{display:flex;align-items:flex-start;gap:.75rem;background:rgba(46,125,212,.08);border:1px solid rgba(46,125,212,.2);border-left:3px solid var(--blue);border-radius:0 8px 8px 0;padding:.75rem 1rem;margin-top:1rem;font-size:13px;color:var(--muted);line-height:1.6;opacity:0;transform:translateX(-8px);transition:opacity .4s ease .2s,transform .4s ease .2s}
+.ann.on{opacity:1;transform:translateX(0)}
+.ann .ai{color:var(--blue-bright);font-size:14px;margin-top:2px;flex-shrink:0}
+.ann strong{color:var(--white);font-weight:500}
+
+.atoggle{display:inline-flex;align-items:center;gap:.4rem;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;padding:4px 10px;transition:all .2s;margin-top:.75rem}
+.atoggle:hover{border-color:var(--blue);color:var(--blue-bright)}
+.acode{display:none;margin-top:.75rem}
+.acode.open{display:block}
+
+.result-panel{background:rgba(26,158,122,.06);border:1px solid rgba(26,158,122,.3);border-radius:12px;padding:1.5rem;margin-top:.25rem;opacity:0;transform:translateY(12px);transition:opacity .6s ease,transform .6s ease}
+.result-panel.visible{opacity:1;transform:translateY(0)}
+.result-header{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.result-header::before{content:'✓';display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--teal);color:white;border-radius:50%;font-size:10px}
+.score-row{display:flex;align-items:center;gap:2rem;margin-bottom:1.25rem}
+.score-big{font-size:3.5rem;font-weight:300;font-family:var(--mono);color:var(--teal);line-height:1}
+.score-meta{font-size:13px;color:var(--muted);line-height:1.8}
+.score-meta strong{color:var(--white);font-weight:500}
+.prov-chain{border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem}
+.prov-lbl{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem}
+.prov-entry{display:flex;align-items:center;gap:1rem;padding:.5rem 0;border-bottom:1px solid rgba(46,125,212,.08);font-size:12px;opacity:0;transform:translateX(-12px);transition:opacity .35s ease,transform .35s ease}
+.prov-entry.visible{opacity:1;transform:translateX(0)}
+.pm{font-family:var(--mono);color:var(--white);min-width:200px;font-size:11.5px}
+.pc{color:var(--teal);font-family:var(--mono);font-size:11.5px;min-width:60px}
+.pl{color:var(--muted);font-family:var(--mono);font-size:11px}
+
+.cta{text-align:center;padding:3rem 0 4rem;opacity:0;transition:opacity .6s ease}
+.cta.visible{opacity:1}
+.cta p{color:var(--muted);margin-bottom:1.5rem;font-size:14px}
+.cta-links{display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap}
+.cta-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.4rem;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none;transition:all .2s}
+.cta-p{background:var(--blue);color:white;border:1px solid var(--blue)}
+.cta-p:hover{background:var(--blue-bright)}
+.cta-s{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.cta-s:hover{color:var(--white);border-color:var(--blue)}
+
+.reset-row{text-align:center;margin:1.5rem 0 .5rem;opacity:0;transition:opacity .4s ease}
+.reset-row.visible{opacity:1}
+.reset-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:12px;padding:6px 14px;border-radius:6px;cursor:pointer;transition:all .2s}
+.reset-btn:hover{border-color:var(--blue);color:var(--white)}
+code{font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo-mark">
+    <div class="logo-sq">SY</div>
+    <span class="logo-name">SYNAPSE</span>
+  </div>
+  <h1>A <strong>three-model pipeline</strong><br>with zero connector code</h1>
+  <p class="subtitle">Every model in this pipeline uses a completely different schema. SYNAPSE translates between them automatically — through a canonical IR and two adapter functions per model.</p>
+</header>
+
+<div class="input-section">
+  <span class="input-label">Contract clause — edit or leave as is</span>
+  <textarea id="inp">This Agreement is entered into as of January 1, 2026, between Meridian Capital Partners LLC ("Licensor"), a Delaware limited liability company, and Acme Corporation ("Licensee"), a California corporation. The Licensor hereby grants Licensee a non-exclusive, worldwide, royalty-free license to use the Licensed Software solely for Licensee's internal business purposes. Licensee shall not sublicense, sell, resell, transfer, assign, or otherwise dispose of the Licensed Software. This Agreement shall be governed by the laws of the State of Delaware.</textarea>
+  <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+    <button class="run-btn" id="run-btn" onclick="run()">Run pipeline <span class="arr">→</span></button>
+    <span id="run-status" style="font-family:var(--mono);font-size:12px;color:var(--muted)"></span>
+  </div>
+</div>
+
+<div id="pipeline">
+
+  <!-- HOP 1 -->
+  <div class="hop" id="hop1">
+    <div class="stage-label">Hop 1 — named entity extraction</div>
+    <div class="model-card">
+      <div class="model-header">
+        <div class="model-name-row">
+          <span class="model-badge badge-ner">NER</span>
+          <span class="model-id">dslim/bert-base-NER</span>
+        </div>
+        <span class="model-meta"><span class="sdot" id="d1"></span><span id="s1">waiting</span></span>
+      </div>
+      <div class="io-grid">
+        <div class="io-panel">
+          <div class="io-label"><span class="albl">↓</span> Model input</div>
+          <pre id="ni"></pre>
+        </div>
+        <div class="io-panel">
+          <div class="io-label"><span class="albl">↑</span> Raw model output</div>
+          <pre id="no"></pre>
+          <div class="ann" id="a1">
+            <span class="ai">→</span>
+            <span><strong>Wordpiece tokenization.</strong> BERT returns "Meridian Capital Partners LLC" as 5 separate tokens. The NER egress adapter reassembles them into full entity spans before writing to the canonical IR. You never handle this in pipeline code.</span>
+          </div>
+          <button class="atoggle" onclick="tog('ac1',this)">{ } show egress adapter</button>
+          <div class="acode" id="ac1">
+            <pre class="on"><span class="c"># NERBertAdapter.egress() — the only code you write</span>
+<span class="k">def</span> <span class="h">egress</span>(self, output, original_ir, latency_ms):
+    updated = original_ir.<span class="h">copy</span>()
+    entities, cur, toks, scores = [], None, [], []
+    <span class="k">for</span> token <span class="k">in</span> output:
+        tag, word, sc = token[<span class="s">"entity"</span>], token[<span class="s">"word"</span>], token[<span class="s">"score"</span>]
+        <span class="k">if</span> tag.startswith(<span class="s">"B-"</span>):
+            <span class="k">if</span> cur: entities.append({
+                <span class="s">"text"</span>: <span class="s">""</span>.join(toks).replace(<span class="s">"##"</span>,<span class="s">""</span>),
+                <span class="s">"label"</span>: cur,
+                <span class="s">"confidence"</span>: sum(scores)/len(scores)
+            })
+            cur, toks, scores = tag[<span class="n">2</span>:], [word], [sc]
+        <span class="k">elif</span> tag.startswith(<span class="s">"I-"</span>): toks.append(word); scores.append(sc)
+    updated.payload.entities = entities
+    updated.provenance.append(self.<span class="h">build_provenance</span>(
+        confidence=<span class="h">max</span>(e[<span class="s">"confidence"</span>] <span class="k">for</span> e <span class="k">in</span> entities),
+        latency_ms=latency_ms
+    ))
+    <span class="k">return</span> updated</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector" id="c1"><div class="conn-line"><div class="conn-dot"></div></div><span class="conn-lbl">canonical IR</span></div>
+
+  <!-- IR 1 -->
+  <div class="hop" id="ir1">
+    <div class="ir-panel">
+      <div class="ir-header">
+        <span class="ir-title">Canonical IR — after hop 1</span>
+        <span class="ir-tag">ir_version: 1.0.0 · provenance: 1 entry</span>
+      </div>
+      <div class="ir-body">
+        <pre id="ir1c"></pre>
+        <div class="ann" id="a-ir1">
+          <span class="ai">→</span>
+          <span><strong>Schema absorbed.</strong> The NER model's raw wordpiece output is now a clean, normalized entity list. The classifier downstream does not know or care what format the NER model uses. It reads from the canonical IR — and nothing else.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector" id="c2"><div class="conn-line"><div class="conn-dot"></div></div></div>
+
+  <!-- HOP 2 -->
+  <div class="hop" id="hop2">
+    <div class="stage-label">Hop 2 — obligation classification</div>
+    <div class="model-card">
+      <div class="model-header">
+        <div class="model-name-row">
+          <span class="model-badge badge-cls">CLS</span>
+          <span class="model-id">internal/obligation-classifier-v2</span>
+        </div>
+        <span class="model-meta"><span class="sdot" id="d2"></span><span id="s2">waiting</span></span>
+      </div>
+      <div class="io-grid">
+        <div class="io-panel">
+          <div class="io-label"><span class="albl">↓</span> Native input (ingress adapter)</div>
+          <pre id="ci"></pre>
+          <div class="ann" id="a2">
+            <span class="ai">→</span>
+            <span><strong>Silent field name translation.</strong> The classifier expects <code>entity_type</code>. The NER model produced <code>label</code>. Same concept, completely different names. The ingress adapter resolves this in 4 lines. No connector file. No bespoke bridge code.</span>
+          </div>
+          <button class="atoggle" onclick="tog('ac2',this)">{ } show ingress adapter</button>
+          <div class="acode" id="ac2">
+            <pre class="on"><span class="c"># ClassifierAdapter.ingress() — reads from canonical IR</span>
+<span class="k">def</span> <span class="h">ingress</span>(self, ir):
+    <span class="k">return</span> [{
+        <span class="s">"text"</span>:         e[<span class="s">"text"</span>],
+        <span class="s">"entity_type"</span>:  e[<span class="s">"label"</span>],   <span class="c"># label → entity_type</span>
+        <span class="s">"context_window"</span>: ir.payload.content[:<span class="n">80</span>],
+        <span class="s">"threshold"</span>:   ir.task_header.quality_floor <span class="k">or</span> <span class="n">0.7</span>,
+    } <span class="k">for</span> e <span class="k">in</span> (ir.payload.entities <span class="k">or</span> [])]</pre>
+          </div>
+        </div>
+        <div class="io-panel">
+          <div class="io-label"><span class="albl">↑</span> Raw model output</div>
+          <pre id="co"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector" id="c3"><div class="conn-line"><div class="conn-dot"></div></div><span class="conn-lbl">canonical IR</span></div>
+
+  <!-- IR 2 -->
+  <div class="hop" id="ir2">
+    <div class="ir-panel">
+      <div class="ir-header">
+        <span class="ir-title">Canonical IR — after hop 2</span>
+        <span class="ir-tag">ir_version: 1.0.0 · provenance: 2 entries</span>
+      </div>
+      <div class="ir-body">
+        <pre id="ir2c"></pre>
+        <div class="ann" id="a-ir2">
+          <span class="ai">→</span>
+          <span><strong>Provenance chain building.</strong> A second entry is appended — model ID, confidence score, latency, cost. Entries are immutable. No downstream model can modify what the NER model recorded. The audit trail is cryptographically ordered.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector" id="c4"><div class="conn-line"><div class="conn-dot"></div></div></div>
+
+  <!-- HOP 3 -->
+  <div class="hop" id="hop3">
+    <div class="stage-label">Hop 3 — compliance scoring</div>
+    <div class="model-card">
+      <div class="model-header">
+        <div class="model-name-row">
+          <span class="model-badge badge-scr">SCR</span>
+          <span class="model-id">internal/compliance-scorer-v3</span>
+        </div>
+        <span class="model-meta"><span class="sdot" id="d3"></span><span id="s3">waiting</span></span>
+      </div>
+      <div class="io-grid">
+        <div class="io-panel">
+          <div class="io-label"><span class="albl">↓</span> Native input (ingress adapter)</div>
+          <pre id="si"></pre>
+          <div class="ann" id="a3">
+            <span class="ai">→</span>
+            <span><strong>Another mismatch, invisibly resolved.</strong> The scorer expects <code>party</code> and <code>role</code>. The classifier used <code>text</code> and <code>obligation_type</code>. The ingress adapter handles it. The scorer never knows a classifier was involved.</span>
+          </div>
+        </div>
+        <div class="io-panel">
+          <div class="io-label"><span class="albl">↑</span> Raw model output</div>
+          <pre id="so"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector" id="c5"><div class="conn-line"><div class="conn-dot"></div></div></div>
+
+  <!-- RESULT -->
+  <div class="result-panel" id="result-panel">
+    <div class="result-header">Pipeline complete</div>
+    <div class="score-row">
+      <div class="score-big">0.87</div>
+      <div class="score-meta">
+        <strong>Compliance score</strong><br>
+        Policy: gdpr-commercial-v3<br>
+        Result: <span style="color:var(--teal);font-weight:500">Passed</span><br>
+        3 models &nbsp;·&nbsp; 0 connectors written
+      </div>
+    </div>
+    <div class="prov-chain">
+      <div class="prov-lbl">Provenance chain — immutable audit trail</div>
+      <div class="prov-entry" id="p1"><span class="pm">dslim/bert-base-NER</span><span class="pc">conf: 0.9991</span><span class="pl">43ms · $0.00</span></div>
+      <div class="prov-entry" id="p2"><span class="pm">obligation-classifier-v2</span><span class="pc">conf: 0.9438</span><span class="pl">67ms · $0.0002</span></div>
+      <div class="prov-entry" id="p3"><span class="pm">compliance-scorer-v3</span><span class="pc">conf: 0.87</span><span class="pl">89ms · $0.0004</span></div>
+    </div>
+  </div>
+
+  <div class="reset-row" id="reset-row">
+    <button class="reset-btn" onclick="reset()">↺ run again</button>
+  </div>
+
+</div>
+
+<div class="cta" id="cta">
+  <p>Two adapter functions per model. Written once. Compatible with every registered model permanently.</p>
+  <div class="cta-links">
+    <a href="https://synapse-ir.github.io/adapter-sdk" class="cta-btn cta-p">Read the docs →</a>
+    <a href="https://github.com/synapse-ir/adapter-sdk" class="cta-btn cta-s">View on GitHub</a>
+    <a href="https://pypi.org/project/synapse-adapter-sdk/" class="cta-btn cta-s">pip install</a>
+  </div>
+</div>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const delay = ms => new Promise(r => setTimeout(r, ms));
+const show = id => { const e=$(id); if(e) e.classList.add('visible'); };
+const on = id => { const e=$(id); if(e) e.classList.add('on'); };
+
+function setS(n, cls, txt) {
+  $('d'+n).className = 'sdot ' + cls;
+  $('s'+n).textContent = txt;
+}
+
+function tog(id, btn) {
+  const el = $(id);
+  el.classList.toggle('open');
+  const open = el.classList.contains('open');
+  const kind = id === 'ac1' ? 'egress' : 'ingress';
+  btn.textContent = open ? '{ } hide adapter' : '{ } show ' + kind + ' adapter';
+}
+
+async function type(id, html, chunk=4) {
+  const el = $(id);
+  el.innerHTML = '';
+  el.classList.add('on');
+  let i = 0;
+  while (i < html.length) {
+    if (html[i] === '<') {
+      const c = html.indexOf('>', i);
+      el.innerHTML += html.slice(i, c+1);
+      i = c+1;
+    } else {
+      el.innerHTML += html.slice(i, i+chunk);
+      i += chunk;
+    }
+    if (i % 40 === 0) await delay(6);
+  }
+}
+
+const D = {
+ni:`{
+  <span class="k">"input_text"</span>: <span class="s">"This Agreement is entered</span>
+<span class="s">  into as of January 1, 2026,</span>
+<span class="s">  between Meridian Capital</span>
+<span class="s">  Partners LLC (Licensor)...</span>
+<span class="s">  Acme Corporation (Licensee)</span>
+<span class="s">  ... Delaware."</span>
+}`,
+
+no:`[
+  {<span class="k">"entity"</span>:<span class="s">"B-ORG"</span>,<span class="k">"word"</span>:<span class="s">"Mer"</span>,       <span class="k">"score"</span>:<span class="n">0.9991</span>},
+  {<span class="k">"entity"</span>:<span class="s">"I-ORG"</span>,<span class="k">"word"</span>:<span class="s">"##idian"</span>,  <span class="k">"score"</span>:<span class="n">0.9987</span>},
+  {<span class="k">"entity"</span>:<span class="s">"I-ORG"</span>,<span class="k">"word"</span>:<span class="s">"Capital"</span>,  <span class="k">"score"</span>:<span class="n">0.9994</span>},
+  {<span class="k">"entity"</span>:<span class="s">"I-ORG"</span>,<span class="k">"word"</span>:<span class="s">"Partners"</span>, <span class="k">"score"</span>:<span class="n">0.9989</span>},
+  {<span class="k">"entity"</span>:<span class="s">"I-ORG"</span>,<span class="k">"word"</span>:<span class="s">"LLC"</span>,      <span class="k">"score"</span>:<span class="n">0.9996</span>},
+  {<span class="k">"entity"</span>:<span class="s">"B-ORG"</span>,<span class="k">"word"</span>:<span class="s">"Acme"</span>,     <span class="k">"score"</span>:<span class="n">0.9994</span>},
+  {<span class="k">"entity"</span>:<span class="s">"I-ORG"</span>,<span class="k">"word"</span>:<span class="s">"Corporation"</span>,<span class="k">"score"</span>:<span class="n">0.9990</span>},
+  {<span class="k">"entity"</span>:<span class="s">"B-LOC"</span>,<span class="k">"word"</span>:<span class="s">"Delaware"</span>, <span class="k">"score"</span>:<span class="n">0.9981</span>},
+  {<span class="k">"entity"</span>:<span class="s">"B-LOC"</span>,<span class="k">"word"</span>:<span class="s">"California"</span>,<span class="k">"score"</span>:<span class="n">0.9977</span>}
+]`,
+
+ir1:`{
+  <span class="k">"ir_version"</span>: <span class="s">"1.0.0"</span>,
+  <span class="k">"task_header"</span>: {
+    <span class="k">"task_type"</span>: <span class="s">"extract"</span>, <span class="k">"domain"</span>: <span class="s">"legal"</span>,
+    <span class="k">"latency_budget_ms"</span>: <span class="n">500</span>
+  },
+  <span class="k">"payload"</span>: {
+    <span class="k">"modality"</span>: <span class="s">"text"</span>,
+    <span class="k">"entities"</span>: [
+      {<span class="k">"text"</span>:<span class="h">"Meridian Capital Partners LLC"</span>,<span class="k">"label"</span>:<span class="s">"ORG"</span>,<span class="k">"confidence"</span>:<span class="n">0.9991</span>},
+      {<span class="k">"text"</span>:<span class="h">"Acme Corporation"</span>,            <span class="k">"label"</span>:<span class="s">"ORG"</span>,<span class="k">"confidence"</span>:<span class="n">0.9992</span>},
+      {<span class="k">"text"</span>:<span class="h">"Delaware"</span>,                    <span class="k">"label"</span>:<span class="s">"LOC"</span>,<span class="k">"confidence"</span>:<span class="n">0.9981</span>},
+      {<span class="k">"text"</span>:<span class="h">"California"</span>,                  <span class="k">"label"</span>:<span class="s">"LOC"</span>,<span class="k">"confidence"</span>:<span class="n">0.9977</span>}
+    ]
+  },
+  <span class="k">"provenance"</span>: [
+    {<span class="k">"model_id"</span>:<span class="s">"dslim/bert-base-NER"</span>,<span class="k">"confidence"</span>:<span class="n">0.9991</span>,<span class="k">"latency_ms"</span>:<span class="n">43</span>}
+  ]
+}`,
+
+ci:`[
+  {
+    <span class="k">"text"</span>:            <span class="s">"Meridian Capital Partners LLC"</span>,
+    <span class="k">"entity_type"</span>:    <span class="s">"ORG"</span>,
+    <span class="k">"context_window"</span>: <span class="s">"...between Meridian Capital..."</span>,
+    <span class="k">"threshold"</span>:      <span class="n">0.7</span>
+  },
+  {
+    <span class="k">"text"</span>:            <span class="s">"Acme Corporation"</span>,
+    <span class="k">"entity_type"</span>:    <span class="s">"ORG"</span>,
+    <span class="k">"context_window"</span>: <span class="s">"...and Acme Corporation..."</span>,
+    <span class="k">"threshold"</span>:      <span class="n">0.7</span>
+  }
+]`,
+
+co:`[
+  {
+    <span class="k">"obligation_type"</span>: <span class="s">"LICENSOR"</span>,
+    <span class="k">"metadata"</span>: {<span class="k">"confidence"</span>:<span class="n">0.9612</span>,<span class="k">"model_version"</span>:<span class="s">"2.1.0"</span>}
+  },
+  {
+    <span class="k">"obligation_type"</span>: <span class="s">"LICENSEE"</span>,
+    <span class="k">"metadata"</span>: {<span class="k">"confidence"</span>:<span class="n">0.9438</span>,<span class="k">"model_version"</span>:<span class="s">"2.1.0"</span>}
+  }
+]`,
+
+ir2:`{
+  <span class="k">"payload"</span>: {
+    <span class="k">"data"</span>: {
+      <span class="k">"classified_entities"</span>: [
+        {<span class="k">"text"</span>:<span class="s">"Meridian Capital Partners LLC"</span>,<span class="k">"role"</span>:<span class="h">"LICENSOR"</span>,<span class="k">"confidence"</span>:<span class="n">0.9612</span>},
+        {<span class="k">"text"</span>:<span class="s">"Acme Corporation"</span>,            <span class="k">"role"</span>:<span class="h">"LICENSEE"</span>,<span class="k">"confidence"</span>:<span class="n">0.9438</span>}
+      ]
+    }
+  },
+  <span class="k">"provenance"</span>: [
+    {<span class="k">"model_id"</span>:<span class="s">"dslim/bert-base-NER"</span>,       <span class="k">"confidence"</span>:<span class="n">0.9991</span>,<span class="k">"latency_ms"</span>:<span class="n">43</span>},
+    {<span class="k">"model_id"</span>:<span class="s">"obligation-classifier-v2"</span>,  <span class="k">"confidence"</span>:<span class="n">0.9438</span>,<span class="k">"latency_ms"</span>:<span class="n">67</span>}
+  ]
+}`,
+
+si:`{
+  <span class="k">"obligations"</span>: [
+    {
+      <span class="k">"party"</span>:            <span class="s">"Meridian Capital Partners LLC"</span>,
+      <span class="k">"role"</span>:             <span class="s">"LICENSOR"</span>,
+      <span class="k">"prior_confidence"</span>: <span class="n">0.9612</span>
+    },
+    {
+      <span class="k">"party"</span>:            <span class="s">"Acme Corporation"</span>,
+      <span class="k">"role"</span>:             <span class="s">"LICENSEE"</span>,
+      <span class="k">"prior_confidence"</span>: <span class="n">0.9438</span>
+    }
+  ],
+  <span class="k">"policy_id"</span>:   <span class="s">"gdpr-commercial-v3"</span>,
+  <span class="k">"strict_mode"</span>: <span class="b">true</span>
+}`,
+
+so:`{
+  <span class="k">"score"</span>:  <span class="n">0.87</span>,
+  <span class="k">"flags"</span>:  [],
+  <span class="k">"passed"</span>: <span class="b">true</span>
+}`
+};
+
+let going = false;
+
+async function run() {
+  if (going) return;
+  going = true;
+  $('run-btn').disabled = true;
+  const ST = 1000, SH = 450;
+
+  const st = txt => $('run-status').textContent = txt;
+
+  // HOP 1
+  st('sending to NER model...');
+  show('hop1'); await delay(SH);
+  setS(1,'active','processing');
+  await type('ni', D.ni); await delay(ST);
+  await type('no', D.no); await delay(700);
+  $('a1').classList.add('on');
+  setS(1,'done','complete · 43ms');
+  await delay(ST);
+
+  // IR 1
+  st('writing canonical IR...');
+  show('c1'); await delay(SH);
+  show('ir1'); await delay(350);
+  await type('ir1c', D.ir1); await delay(600);
+  $('a-ir1').classList.add('on');
+  await delay(ST);
+
+  // HOP 2
+  st('routing to classifier...');
+  show('c2'); await delay(SH);
+  show('hop2'); await delay(350);
+  setS(2,'active','processing');
+  await type('ci', D.ci); await delay(500);
+  $('a2').classList.add('on');
+  await delay(800);
+  await type('co', D.co);
+  setS(2,'done','complete · 67ms');
+  await delay(ST);
+
+  // IR 2
+  st('updating canonical IR...');
+  show('c3'); await delay(SH);
+  show('ir2'); await delay(350);
+  await type('ir2c', D.ir2); await delay(600);
+  $('a-ir2').classList.add('on');
+  await delay(ST);
+
+  // HOP 3
+  st('routing to compliance scorer...');
+  show('c4'); await delay(SH);
+  show('hop3'); await delay(350);
+  setS(3,'active','processing');
+  await type('si', D.si); await delay(500);
+  $('a3').classList.add('on');
+  await delay(800);
+  await type('so', D.so);
+  setS(3,'done','complete · 89ms');
+  await delay(ST);
+
+  // RESULT
+  st('pipeline complete');
+  show('c5'); await delay(SH);
+  show('result-panel'); await delay(500);
+  for (const id of ['p1','p2','p3']) { show(id); await delay(280); }
+
+  await delay(700);
+  show('reset-row');
+  show('cta');
+  going = false;
+}
+
+function reset() {
+  ['hop1','hop2','hop3','ir1','ir2','c1','c2','c3','c4','c5',
+   'result-panel','reset-row','cta','p1','p2','p3'].forEach(id => {
+    const e=$(id); if(e) e.classList.remove('visible');
+  });
+  ['ni','no','ir1c','ci','co','ir2c','si','so'].forEach(id => {
+    const e=$(id); if(e){ e.classList.remove('on'); e.innerHTML=''; }
+  });
+  ['a1','a-ir1','a2','a-ir2','a3'].forEach(id => {
+    const e=$(id); if(e) e.classList.remove('on');
+  });
+  ['1','2','3'].forEach(n => setS(n,'','waiting'));
+  ['ac1','ac2'].forEach(id => { const e=$(id); if(e) e.classList.remove('open'); });
+  $('run-btn').disabled = false;
+  $('run-status').textContent = '';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
