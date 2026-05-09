@@ -46,8 +46,8 @@ synapse-validate --adapter my_module.MyModelAdapter
 
 ## Documentation
 
-- [Getting started](https://docs.synapse-ir.io/getting-started)
-- [Writing adapters](https://docs.synapse-ir.io/adapters)
+- [Getting started](https://synapse-ir.github.io/adapter-sdk/getting-started/installation/)
+- [Writing adapters](https://synapse-ir.github.io/adapter-sdk/getting-started/first-adapter/)
 - [Canonical IR specification](https://github.com/synapse-ir/spec)
 - [Registry](https://github.com/synapse-ir/registry)
 
@@ -57,6 +57,14 @@ SYNAPSE does not compete with MCP or A2A. It builds on top of them.
 MCP connects agents to tools. A2A connects agents to each other.
 SYNAPSE connects specialized models with incompatible schemas — and
 makes routing between them smarter over time.
+
+## Feedback and issues
+
+Found a bug or have a feature request? Open an issue:
+https://github.com/synapse-ir/adapter-sdk/issues
+
+For security vulnerabilities, see [SECURITY.md](SECURITY.md) instead
+of opening a public issue.
 
 ## License
 
