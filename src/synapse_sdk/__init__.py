@@ -13,14 +13,18 @@ from synapse_sdk.cache import (
     HeartbeatResponse,
     InMemoryContextStore,
     RedisContextStore,
-    RouteCandidate,
     RouteCacheClient,
+    RouteCandidate,
     RouteRequest,
     RouteResponse,
     S3ContextStore,
     make_context_store,
 )
-from synapse_sdk.tracing import adapter_span, make_child_traceparent, propagate_trace_context
+from synapse_sdk.tracing import (
+    adapter_span,
+    make_child_traceparent,
+    propagate_trace_context,
+)
 from synapse_sdk.types import (
     BranchRole,
     CanonicalIR,

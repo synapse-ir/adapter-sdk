@@ -115,7 +115,7 @@ class LocalManifestLoader:
         try:
             mtime = os.path.getmtime(self._path)
             with open(self._path, encoding="utf-8") as fh:
-                raw: list[dict] = json.load(fh)
+                raw: list[dict[str, Any]] = json.load(fh)
             manifests = [CapabilityManifest(**entry) for entry in raw]
             with self._lock:
                 self._manifests = manifests
@@ -325,10 +325,10 @@ _init()
 
 __all__ = [
     "CapabilityManifest",
+    "LocalCalibrationWriter",
     "LocalManifestLoader",
     "LocalRouter",
-    "LocalCalibrationWriter",
-    "is_local_mode",
-    "get_router",
     "get_cal_writer",
+    "get_router",
+    "is_local_mode",
 ]

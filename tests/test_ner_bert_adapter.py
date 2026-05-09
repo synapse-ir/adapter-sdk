@@ -6,8 +6,8 @@ import uuid
 from typing import Any
 
 import pytest
-
 from adapters.ner_bert_adapter import NERBertAdapter
+
 from synapse_sdk.testing.fixtures import ALL_FIXTURES
 from synapse_sdk.types import (
     CanonicalIR,
@@ -18,7 +18,6 @@ from synapse_sdk.types import (
     TaskType,
 )
 from synapse_sdk.validator import AdapterValidator
-
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers

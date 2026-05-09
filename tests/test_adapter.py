@@ -17,7 +17,6 @@ from synapse_sdk.types import (
     TaskType,
 )
 
-
 # ---------------------------------------------------------------------------
 # Minimal concrete adapter for testing AdapterBase directly
 # ---------------------------------------------------------------------------

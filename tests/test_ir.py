@@ -1,19 +1,16 @@
 """Tests for CanonicalIR and related types (§1, G-C05, G-C08)."""
 
 import json
+
 import pytest
 from pydantic import ValidationError
 
 from synapse_sdk.types import (
     CanonicalIR,
-    ComplianceEnvelope,
     Domain,
-    Entity,
     IRInvalidFieldError,
     IRPayloadTooLargeError,
-    Payload,
     ProvenanceEntry,
-    TaskHeader,
     TaskType,
 )
 

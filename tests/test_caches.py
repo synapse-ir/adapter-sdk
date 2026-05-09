@@ -12,13 +12,12 @@ from synapse_sdk.cache import (
     HeartbeatCache,
     HeartbeatResponse,
     InMemoryContextStore,
-    RouteCandidate,
     RouteCacheClient,
+    RouteCandidate,
     RouteRequest,
     RouteResponse,
     _route_cache_key,
 )
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Shared helpers

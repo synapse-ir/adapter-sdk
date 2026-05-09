@@ -21,14 +21,14 @@ from __future__ import annotations
 
 import argparse
 import importlib
-import json
 import os
 import sys
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, NoReturn
 
 if TYPE_CHECKING:
     from synapse_sdk.types import CanonicalIR
-    from synapse_sdk.validator import AdapterValidationResult
+    from synapse_sdk.validator import AdapterValidationResult, ValidationFailure
 
 # ---------------------------------------------------------------------------
 # ANSI colour helpers
@@ -52,11 +52,11 @@ def _glyph(unicode_char: str, ascii_fallback: str) -> str:
     return ascii_fallback if _NO_UNICODE else unicode_char
 
 
-_HR    = lambda: _glyph("─", "-") * 60  # noqa: E731
-_PASS  = lambda: _glyph("✓", "+")       # noqa: E731
-_FAIL  = lambda: _glyph("✗", "x")       # noqa: E731
-_WARN  = lambda: _glyph("⚠", "!")       # noqa: E731
-_ARROW = lambda: _glyph("→", "->")      # noqa: E731
+_HR:    Callable[[], str] = lambda: _glyph("─", "-") * 60  # noqa: E731
+_PASS:  Callable[[], str] = lambda: _glyph("✓", "+")       # noqa: E731
+_FAIL:  Callable[[], str] = lambda: _glyph("✗", "x")       # noqa: E731
+_WARN:  Callable[[], str] = lambda: _glyph("⚠", "!")       # noqa: E731
+_ARROW: Callable[[], str] = lambda: _glyph("→", "->")      # noqa: E731
 
 
 def _green(s: str) -> str:
@@ -83,7 +83,7 @@ def _dim(s: str) -> str:
 # Adapter loading
 # ---------------------------------------------------------------------------
 
-def _load_adapter(dotted_path: str):
+def _load_adapter(dotted_path: str) -> Any:
     """Import a class by dotted path (e.g. 'mypackage.module.ClassName').
 
     Raises SystemExit(2) with a descriptive message on any failure.
@@ -128,7 +128,7 @@ def _load_adapter(dotted_path: str):
 # Fixture loading
 # ---------------------------------------------------------------------------
 
-def _load_fixture_file(path: str) -> "CanonicalIR":
+def _load_fixture_file(path: str) -> CanonicalIR:
     from synapse_sdk.types import CanonicalIR
 
     try:
@@ -146,7 +146,7 @@ def _load_fixture_file(path: str) -> "CanonicalIR":
         )
 
 
-def _load_all_fixtures() -> "list[CanonicalIR]":
+def _load_all_fixtures() -> list[CanonicalIR]:
     try:
         from synapse_sdk.testing.fixtures import ALL_FIXTURES
         return ALL_FIXTURES
@@ -159,7 +159,7 @@ def _load_all_fixtures() -> "list[CanonicalIR]":
 # ---------------------------------------------------------------------------
 
 def _print_result(
-    result: "AdapterValidationResult",
+    result: AdapterValidationResult,
     adapter_name: str,
     fixture_label: str,
 ) -> None:
@@ -177,7 +177,7 @@ def _print_result(
         print(f"         {_yellow(_WARN())} [{warn.rule_id}] {warn.message}")
 
 
-def _run_single(adapter, fixture: "CanonicalIR", label: str) -> "AdapterValidationResult":
+def _run_single(adapter: Any, fixture: CanonicalIR, label: str) -> AdapterValidationResult:
     from synapse_sdk.validator import AdapterValidator
 
     validator = AdapterValidator(adapter, fixtures=[fixture])
@@ -200,7 +200,7 @@ _RULE_RECOMMENDATIONS: dict[str, str] = {}  # populated lazily in main()
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _die(msg: str, code: int = 1) -> "None":
+def _die(msg: str, code: int = 1) -> NoReturn:
     print(f"{_red('error:')} {msg}", file=sys.stderr)
     sys.exit(code)
 
@@ -280,10 +280,10 @@ def main(argv: list[str] | None = None) -> None:
     passed = 0
     failed = 0
 
-    all_errors:   list = []
-    all_warnings: list = []
+    all_errors:   list[ValidationFailure] = []
+    all_warnings: list[ValidationFailure] = []
 
-    for fixture, label in zip(fixtures, labels):
+    for fixture, label in zip(fixtures, labels, strict=False):
         result = _run_single(adapter, fixture, label)
         _print_result(result, adapter_name, label)
 

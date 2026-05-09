@@ -12,11 +12,11 @@ from synapse_sdk.types import (
     Domain,
     FailedStage,
     FailurePolicy,
+    PartialCompletionResponse,
     Payload,
     ProvenanceEntry,
     TaskHeader,
     TaskType,
-    PartialCompletionResponse,
 )
 
 # ---------------------------------------------------------------------------
@@ -24,12 +24,12 @@ from synapse_sdk.types import (
 # ---------------------------------------------------------------------------
 
 def _make_header(failure_policy: FailurePolicy | None = None) -> TaskHeader:
-    kwargs: dict = dict(
-        task_type=TaskType.extract,
-        domain=Domain.legal,
-        priority=2,
-        latency_budget_ms=500,
-    )
+    kwargs: dict = {
+        "task_type": TaskType.extract,
+        "domain": Domain.legal,
+        "priority": 2,
+        "latency_budget_ms": 500,
+    }
     if failure_policy is not None:
         kwargs["failure_policy"] = failure_policy
     return TaskHeader(**kwargs)

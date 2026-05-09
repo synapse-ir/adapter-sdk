@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Any
 
 from synapse_sdk.types import (
     CanonicalIR,
-    ComplianceEnvelope,
     Domain,
     Payload,
     ProvenanceEntry,
@@ -132,7 +131,7 @@ _NETWORK_ATTR_PREFIXES = frozenset({
 })
 
 
-def _find_network_calls(fn) -> list[str]:
+def _find_network_calls(fn: Any) -> list[str]:
     """Return list of human-readable descriptions of network calls found via AST scan."""
     try:
         src = inspect.getsource(fn)
@@ -221,8 +220,8 @@ class AdapterValidator:
 
     def __init__(
         self,
-        adapter: "AdapterBase",
-        fixtures: "list[CanonicalIR] | None" = None,
+        adapter: AdapterBase,
+        fixtures: list[CanonicalIR] | None = None,
     ) -> None:
         self._adapter = adapter
         self._fixtures: list[CanonicalIR] = fixtures if fixtures is not None else []
@@ -243,10 +242,12 @@ class AdapterValidator:
 
         # Static rules — independent of any fixture
         r7 = self._rule_no_network_calls()
-        if r7: errors.append(r7)
+        if r7:
+            errors.append(r7)
 
         r10 = self._rule_version_semver()
-        if r10: errors.append(r10)
+        if r10:
+            errors.append(r10)
 
         # Behavioural rules — run per fixture
         fixtures = self._fixtures or [_minimal_ir()]
@@ -264,7 +265,7 @@ class AdapterValidator:
 
     def _run_fixture(
         self, fixture: CanonicalIR
-    ) -> "tuple[list[ValidationFailure], list[ValidationFailure]]":
+    ) -> tuple[list[ValidationFailure], list[ValidationFailure]]:
         """Run all behavioural rules against a single fixture IR."""
         errors:   list[ValidationFailure] = []
         warnings: list[ValidationFailure] = []
@@ -287,7 +288,8 @@ class AdapterValidator:
 
         # Rule 1
         _r1 = self._rule_ingress_not_null(ingress_output, ingress_ok)
-        if _r1: errors.append(_r1)
+        if _r1:
+            errors.append(_r1)
 
         # -- Run egress; keep result for downstream rules ----------------
         egress_output: Any = None
@@ -321,34 +323,43 @@ class AdapterValidator:
 
         if egress_ir is not None:
             r3 = self._rule_provenance_appended(fixture, egress_ir)
-            if r3: errors.append(r3)
+            if r3:
+                errors.append(r3)
 
             r4 = self._rule_provenance_immutable(provenance_before, egress_ir)
-            if r4: errors.append(r4)
+            if r4:
+                errors.append(r4)
 
             r5 = self._rule_task_header_carried(fixture, egress_ir)
-            if r5: errors.append(r5)
+            if r5:
+                errors.append(r5)
 
             r6 = self._rule_compliance_carried(fixture, egress_ir)
-            if r6: errors.append(r6)
+            if r6:
+                errors.append(r6)
 
-            # Inspect the new provenance entry for rules 8–12
+            # Inspect the new provenance entry for rules 8-12
             new_entry = self._new_provenance_entry(fixture, egress_ir)
             if new_entry is not None:
                 r8 = self._rule_confidence_range(new_entry)
-                if r8: errors.append(r8)
+                if r8:
+                    errors.append(r8)
 
                 r9 = self._rule_model_id_match(new_entry)
-                if r9: errors.append(r9)
+                if r9:
+                    errors.append(r9)
 
                 r11 = self._rule_latency_positive(new_entry)
-                if r11: warnings.append(r11)
+                if r11:
+                    warnings.append(r11)
 
                 r12 = self._rule_cost_non_negative(new_entry)
-                if r12: warnings.append(r12)
+                if r12:
+                    warnings.append(r12)
 
             r13 = self._rule_content_preserved(fixture, egress_ir)
-            if r13: warnings.append(r13)
+            if r13:
+                warnings.append(r13)
 
         return errors, warnings
 

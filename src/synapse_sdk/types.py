@@ -6,9 +6,9 @@ import json
 import logging
 import re
 from enum import StrEnum
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +164,7 @@ class TraceContext(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     traceparent: str
-    tracestate:  Optional[str] = None
+    tracestate:  str | None = None
 
     @field_validator("traceparent", mode="before")
     @classmethod
@@ -179,7 +179,7 @@ class TraceContext(BaseModel):
 
     @field_validator("tracestate", mode="before")
     @classmethod
-    def _no_nulls_tracestate(cls, v: Optional[str]) -> Optional[str]:
+    def _no_nulls_tracestate(cls, v: str | None) -> str | None:
         if v is not None:
             _reject_null_bytes(v, "trace_context.tracestate")
         return v
@@ -192,18 +192,18 @@ class TaskHeader(BaseModel):
     domain:            Domain
     priority:          int   = Field(..., ge=1, le=3)
     latency_budget_ms: int   = Field(..., ge=0)
-    cost_ceiling:      Optional[float] = None
-    quality_floor:     Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    session_id:        Optional[str]   = None
-    idempotency_key:   Optional[str]   = None
+    cost_ceiling:      float | None = None
+    quality_floor:     float | None = Field(default=None, ge=0.0, le=1.0)
+    session_id:        str | None   = None
+    idempotency_key:   str | None   = None
     # G-S01 — W3C Trace Context propagation
-    trace_context:     Optional[TraceContext] = None
+    trace_context:     TraceContext | None = None
     # G-S02 — pipeline failure semantics ('abort' preserves current behaviour)
     failure_policy:    FailurePolicy = FailurePolicy.abort
 
     @field_validator("session_id", "idempotency_key", mode="before")
     @classmethod
-    def _no_nulls(cls, v: Optional[str], info) -> Optional[str]:
+    def _no_nulls(cls, v: str | None, info: ValidationInfo) -> str | None:
         if v is not None:
             _reject_null_bytes(v, f"task_header.{info.field_name}")
         return v
@@ -214,13 +214,13 @@ class Entity(BaseModel):
 
     text:       str
     label:      str
-    start:      Optional[int]   = Field(default=None, ge=0)
-    end:        Optional[int]   = Field(default=None, ge=0)
-    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    start:      int | None   = Field(default=None, ge=0)
+    end:        int | None   = Field(default=None, ge=0)
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
 
     @field_validator("text", "label", mode="before")
     @classmethod
-    def _no_nulls(cls, v: str, info) -> str:
+    def _no_nulls(cls, v: str, info: ValidationInfo) -> str:
         _reject_null_bytes(v, f"entity.{info.field_name}")
         return v
 
@@ -231,27 +231,27 @@ class Payload(BaseModel):
     modality: str  # "text" | "embedding" | "structured" | "binary"
 
     # text
-    content:         Optional[str] = None
-    content_length:  Optional[int] = None
-    language:        Optional[str] = None
+    content:         str | None = None
+    content_length:  int | None = None
+    language:        str | None = None
 
     # embedding
-    vector:          Optional[list[float]] = None
-    vector_dim:      Optional[int]         = None
-    embedding_model: Optional[str]         = None
+    vector:          list[float] | None = None
+    vector_dim:      int | None         = None
+    embedding_model: str | None         = None
 
     # structured
-    data:       Optional[dict[str, Any]] = None
-    schema_ref: Optional[str]            = None
+    data:       dict[str, Any] | None = None
+    schema_ref: str | None            = None
 
     # binary
-    binary_b64:  Optional[str] = None
-    mime_type:   Optional[str] = None
-    byte_length: Optional[int] = None
+    binary_b64:  str | None = None
+    mime_type:   str | None = None
+    byte_length: int | None = None
 
     # common
-    context_ref: Optional[str]          = None
-    entities:    Optional[list[Entity]] = None
+    context_ref: str | None          = None
+    entities:    list[Entity] | None = None
 
     @field_validator("modality", mode="before")
     @classmethod
@@ -263,7 +263,7 @@ class Payload(BaseModel):
 
     @field_validator("content", mode="before")
     @classmethod
-    def _validate_content(cls, v: Optional[str]) -> Optional[str]:
+    def _validate_content(cls, v: str | None) -> str | None:
         if v is None:
             return v
         _reject_null_bytes(v, "payload.content")
@@ -279,7 +279,7 @@ class Payload(BaseModel):
 
     @field_validator("vector", mode="before")
     @classmethod
-    def _validate_vector(cls, v: Optional[list[float]]) -> Optional[list[float]]:
+    def _validate_vector(cls, v: list[float] | None) -> list[float] | None:
         if v is None:
             return v
         size = len(v) * 8  # float64 = 8 bytes
@@ -291,7 +291,7 @@ class Payload(BaseModel):
 
     @field_validator("data", mode="before")
     @classmethod
-    def _validate_data(cls, v: Optional[dict]) -> Optional[dict]:
+    def _validate_data(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
         if v is None:
             return v
         size = len(json.dumps(v).encode("utf-8"))
@@ -303,7 +303,7 @@ class Payload(BaseModel):
 
     @field_validator("binary_b64", mode="before")
     @classmethod
-    def _validate_binary(cls, v: Optional[str]) -> Optional[str]:
+    def _validate_binary(cls, v: str | None) -> str | None:
         if v is None:
             return v
         _reject_null_bytes(v, "payload.binary_b64")
@@ -316,13 +316,13 @@ class Payload(BaseModel):
 
     @field_validator("language", "schema_ref", "context_ref", "embedding_model", "mime_type", mode="before")
     @classmethod
-    def _no_nulls_str(cls, v: Optional[str], info) -> Optional[str]:
+    def _no_nulls_str(cls, v: str | None, info: ValidationInfo) -> str | None:
         if v is not None:
             _reject_null_bytes(v, f"payload.{info.field_name}")
         return v
 
     @model_validator(mode="after")
-    def _modality_consistency(self) -> "Payload":
+    def _modality_consistency(self) -> Payload:
         if self.modality == "text" and self.content is None:
             raise ValueError("payload.content is required when modality='text'")
         if self.modality == "embedding" and self.vector is None:
@@ -355,22 +355,22 @@ class ProvenanceEntry(BaseModel):
     confidence:      float = Field(..., ge=0.0, le=1.0)
     latency_ms:      int   = Field(..., ge=0)
     timestamp_unix:  int
-    cost_usd:        Optional[float] = None
-    token_count:     Optional[int]   = None
-    warnings:        Optional[list[str]] = None
+    cost_usd:        float | None = None
+    token_count:     int | None   = None
+    warnings:        list[str] | None = None
     # G-S03 — parallel branch anchor points (absent for sequential pipelines)
-    branch_id:       Optional[str]        = None
-    branch_role:     Optional[BranchRole] = None
+    branch_id:       str | None        = None
+    branch_role:     BranchRole | None = None
 
     @field_validator("model_id", "adapter_version", mode="before")
     @classmethod
-    def _no_nulls(cls, v: str, info) -> str:
+    def _no_nulls(cls, v: str, info: ValidationInfo) -> str:
         _reject_null_bytes(v, f"provenance.{info.field_name}")
         return v
 
     @field_validator("warnings", mode="before")
     @classmethod
-    def _no_nulls_warnings(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+    def _no_nulls_warnings(cls, v: list[str] | None) -> list[str] | None:
         if v is not None:
             for w in v:
                 _reject_null_bytes(w, "provenance.warnings[]")
@@ -378,7 +378,7 @@ class ProvenanceEntry(BaseModel):
 
     @field_validator("branch_id", mode="before")
     @classmethod
-    def _validate_branch_id(cls, v: Optional[str]) -> Optional[str]:
+    def _validate_branch_id(cls, v: str | None) -> str | None:
         if v is None:
             return v
         _reject_null_bytes(v, "provenance.branch_id")
@@ -390,15 +390,15 @@ class ProvenanceEntry(BaseModel):
 class ComplianceEnvelope(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    required_tags:      Optional[list[str]] = None
-    pii_present:        Optional[bool]      = None
-    data_residency:     Optional[list[str]] = None
-    retention_policy:   Optional[str]       = None
-    purpose_limitation: Optional[str]       = None
+    required_tags:      list[str] | None = None
+    pii_present:        bool | None      = None
+    data_residency:     list[str] | None = None
+    retention_policy:   str | None       = None
+    purpose_limitation: str | None       = None
 
     @field_validator("required_tags", mode="before")
     @classmethod
-    def _validate_tags(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+    def _validate_tags(cls, v: list[str] | None) -> list[str] | None:
         if v is None:
             return v
         if len(v) > TAGS_HARD_LEN:
@@ -446,7 +446,7 @@ class CanonicalIR(BaseModel):
 
     @field_validator("provenance", mode="before")
     @classmethod
-    def _validate_provenance_len(cls, v: list) -> list:
+    def _validate_provenance_len(cls, v: list[Any]) -> list[Any]:
         if len(v) > PROVENANCE_HARD_LEN:
             raise ValueError(
                 f"provenance array exceeds maximum of {PROVENANCE_HARD_LEN} entries "
@@ -460,7 +460,7 @@ class CanonicalIR(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _total_size_check(self) -> "CanonicalIR":
+    def _total_size_check(self) -> CanonicalIR:
         size = len(self.to_json().encode("utf-8"))
         if size > TOTAL_IR_HARD_BYTES:
             raise IRPayloadTooLargeError("canonical_ir", TOTAL_IR_HARD_BYTES, size)
@@ -472,11 +472,11 @@ class CanonicalIR(BaseModel):
     # Public API
     # ------------------------------------------------------------------
 
-    def copy(self, **kwargs: Any) -> "CanonicalIR":
+    def copy(self, **kwargs: Any) -> CanonicalIR:
         """Shallow copy — new top-level model instance, shared sub-objects."""
         return self.model_copy()
 
-    def clone(self) -> "CanonicalIR":
+    def clone(self) -> CanonicalIR:
         """Deep copy with no shared state."""
         return self.model_validate(self.model_dump())
 
@@ -485,7 +485,7 @@ class CanonicalIR(BaseModel):
         return self.model_dump_json()
 
     @classmethod
-    def from_json(cls, data: str | bytes) -> "CanonicalIR":
+    def from_json(cls, data: str | bytes) -> CanonicalIR:
         """Deserialize from JSON, running all validators."""
         return cls.model_validate_json(data)
 
@@ -500,12 +500,12 @@ class FailedStage(BaseModel):
 
     model_id:    str
     error:       str
-    detail:      Optional[str] = None
-    stage_index: Optional[int] = Field(default=None, ge=0)
+    detail:      str | None = None
+    stage_index: int | None = Field(default=None, ge=0)
 
     @field_validator("model_id", "error", mode="before")
     @classmethod
-    def _no_nulls(cls, v: str, info) -> str:
+    def _no_nulls(cls, v: str, info: ValidationInfo) -> str:
         _reject_null_bytes(v, f"failed_stage.{info.field_name}")
         return v
 

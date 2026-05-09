@@ -15,9 +15,7 @@ from synapse_sdk.tracing import (
 )
 from synapse_sdk.types import (
     CanonicalIR,
-    ComplianceEnvelope,
     Domain,
-    FailurePolicy,
     Payload,
     TaskHeader,
     TaskType,

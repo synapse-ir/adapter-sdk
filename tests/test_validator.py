@@ -24,7 +24,6 @@ from synapse_sdk.validator import (
     Severity,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -207,7 +206,7 @@ def test_provenance_immutable_fails_when_existing_entry_modified():
     # Build an IR that already has a provenance entry, then run the mutating adapter
     adapter = _MutatesProvenanceAdapter()
     validator = AdapterValidator(adapter)
-    result = validator.run()
+    validator.run()
     # The mutation happens internally — PROVENANCE_IMMUTABLE should fire
     # (validator seeds with empty provenance, so this adapter passes; we test directly)
     # Test via a custom scenario: wrap the validator to inject pre-existing provenance
@@ -238,8 +237,7 @@ def test_provenance_immutable_fails_when_existing_entry_modified():
     before = list(ir.provenance)
     out = adapter2.egress({}, ir, latency_ms=10)
 
-    from synapse_sdk.validator import AdapterValidator as AV
-    v = AV(adapter2)
+    v = AdapterValidator(adapter2)
     failure = v._rule_provenance_immutable(before, out)
     assert failure is not None
     assert failure.rule_id == "PROVENANCE_IMMUTABLE"
@@ -255,7 +253,7 @@ class _MutatesTaskHeaderAdapter(_GoodAdapter):
     def egress(self, model_output, original_ir, latency_ms):
         updated = original_ir.clone()
         # Reconstruct task_header with different priority
-        from synapse_sdk.types import TaskHeader, TaskType, Domain
+        from synapse_sdk.types import Domain, TaskHeader, TaskType
         updated.task_header = TaskHeader(
             task_type=TaskType.generate,
             domain=Domain.general,
@@ -330,16 +328,15 @@ def test_no_network_calls_detected_via_ast():
     adapter_cls = ns["_NetworkAdapter"]
 
     # Patch ingress source to be scannable
-    import types as pytypes
     adapter = object.__new__(adapter_cls)
 
     validator = AdapterValidator(adapter)
-    failure = validator._rule_no_network_calls()
+    validator._rule_no_network_calls()
     # The AST scanner reads the source via inspect — since this is exec'd code
     # inspect.getsource will fail; test the scanner on a real method instead.
     # We verify via a direct call to _find_network_calls with fake source.
-    from synapse_sdk.validator import _find_network_calls
-    import ast, textwrap
+    import textwrap
+
 
     fake_src = textwrap.dedent("""
         import requests
@@ -357,7 +354,8 @@ def test_no_network_calls_detected_via_ast():
 def _find_network_calls_from_src(src: str) -> list[str]:
     """Helper: run the AST scanner on raw source text."""
     import ast
-    from synapse_sdk.validator import _NETWORK_MODULES, _NETWORK_ATTR_PREFIXES
+
+    from synapse_sdk.validator import _NETWORK_ATTR_PREFIXES, _NETWORK_MODULES
     tree = ast.parse(src)
     findings = []
     for node in ast.walk(tree):
@@ -397,8 +395,9 @@ def test_no_network_calls_clean_adapter_passes():
 # ---------------------------------------------------------------------------
 
 def test_confidence_range_fails_above_1():
-    from synapse_sdk.types import ProvenanceEntry
     import time
+
+    from synapse_sdk.types import ProvenanceEntry
     entry = ProvenanceEntry(
         model_id="x", adapter_version="1.0.0",
         confidence=0.5, latency_ms=10, timestamp_unix=int(time.time()),
@@ -413,8 +412,9 @@ def test_confidence_range_fails_above_1():
 def test_confidence_range_rule_message_quality():
     # Verify a message would be generated for out-of-range values
     # (ProvenanceEntry itself enforces range, so we test the rule logic directly)
-    from synapse_sdk.validator import AdapterValidator, ValidationFailure, Severity
     from unittest.mock import MagicMock
+
+    from synapse_sdk.validator import AdapterValidator, Severity
     entry = MagicMock()
     entry.confidence = 1.5
     validator = AdapterValidator(_GoodAdapter())

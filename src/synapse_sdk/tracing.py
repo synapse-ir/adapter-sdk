@@ -29,8 +29,9 @@ from __future__ import annotations
 import logging
 import os
 import secrets
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Generator, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from synapse_sdk.types import CanonicalIR, TraceContext
@@ -80,7 +81,7 @@ def _get_otel_tracer() -> object:
         return None  # already failed once — don't retry on every call
     _otel_import_attempted = True
     try:
-        from opentelemetry import trace  # type: ignore[import-untyped]
+        from opentelemetry import trace
         _otel_tracer = trace.get_tracer("synapse.sdk", "0.1.0")
         logger.debug("OTel tracer initialised for synapse.sdk")
         return _otel_tracer
@@ -112,7 +113,7 @@ def make_child_traceparent(parent_traceparent: str) -> str:
     return _build_traceparent(trace_id, _new_span_id(), flags)
 
 
-def propagate_trace_context(ir: "CanonicalIR") -> "TraceContext":
+def propagate_trace_context(ir: CanonicalIR) -> TraceContext:
     """Derive the egress TraceContext for an IR hop.
 
     * If the IR carries a ``trace_context``: returns a child context that
@@ -151,13 +152,13 @@ def propagate_trace_context(ir: "CanonicalIR") -> "TraceContext":
 
 @contextmanager
 def adapter_span(
-    ir: "CanonicalIR",
+    ir: CanonicalIR,
     model_id: str,
     adapter_version: str,
     direction: str,
     *,
-    latency_ms: Optional[int] = None,
-    confidence: Optional[float] = None,
+    latency_ms: int | None = None,
+    confidence: float | None = None,
 ) -> Generator[object, None, None]:
     """Context manager that wraps an adapter invocation in an OTel child span.
 
@@ -187,8 +188,7 @@ def adapter_span(
         return
 
     try:
-        from opentelemetry import trace  # type: ignore[import-untyped]
-        from opentelemetry.trace.propagation.tracecontext import (  # type: ignore[import-untyped]
+        from opentelemetry.trace.propagation.tracecontext import (
             TraceContextTextMapPropagator,
         )
 

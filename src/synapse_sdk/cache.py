@@ -16,7 +16,7 @@ import threading
 import time
 from collections import OrderedDict, deque
 from dataclasses import dataclass, field
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, ClassVar, Protocol, runtime_checkable
 
 log = logging.getLogger(__name__)
 
@@ -109,14 +109,14 @@ class AdapterInstanceCache:
     concurrent miss would hold the lock during import.
     """
 
-    _cache: OrderedDict[str, Any] = OrderedDict()
-    _lock = threading.Lock()
-    _max: int = int(os.getenv("SYNAPSE_ADAPTER_CACHE_MAX", "256"))
-    _eager_load: bool = os.getenv("SYNAPSE_ADAPTER_EAGER_LOAD", "false").lower() == "true"
+    _cache: ClassVar[OrderedDict[str, Any]] = OrderedDict()
+    _lock: ClassVar[threading.Lock] = threading.Lock()
+    _max: ClassVar[int] = int(os.getenv("SYNAPSE_ADAPTER_CACHE_MAX", "256"))
+    _eager_load: ClassVar[bool] = os.getenv("SYNAPSE_ADAPTER_EAGER_LOAD", "false").lower() == "true"
 
     # Prometheus-compatible counters (replace with real counters in production)
-    _hits_total: int = 0
-    _misses_total: int = 0
+    _hits_total: ClassVar[int] = 0
+    _misses_total: ClassVar[int] = 0
 
     @classmethod
     def get(cls, model_id: str, version: str) -> Any:
@@ -177,10 +177,10 @@ class AdapterInstanceCache:
         )
 
     # Pluggable loader registry: key -> zero-arg callable returning AdapterBase
-    _registry: dict[str, Any] = {}
+    _registry: ClassVar[dict[str, Any]] = {}
 
     @classmethod
-    def register(cls, model_id: str, version: str, factory) -> None:
+    def register(cls, model_id: str, version: str, factory: Any) -> None:
         """Register a zero-arg callable that constructs an adapter instance."""
         cls._registry[f"{model_id}:{version}"] = factory
 
@@ -217,7 +217,7 @@ def _route_cache_key(request: RouteRequest) -> str:
 
 
 class _L1Entry:
-    __slots__ = ("response", "cached_at", "ttl", "hit_count")
+    __slots__ = ("cached_at", "hit_count", "response", "ttl")
 
     def __init__(self, response: RouteResponse, ttl: int) -> None:
         self.response = response
@@ -257,7 +257,7 @@ class RouteCacheClient:
         self._l1: OrderedDict[str, _L1Entry] = OrderedDict()
         self._lock = threading.Lock()
 
-        self._redis = None
+        self._redis: Any = None
         if redis_url:
             self._redis = self._connect_redis(redis_url)
 
@@ -343,7 +343,7 @@ class RouteCacheClient:
 
     # ── Redis internals (graceful fallback on any error) ──────────────────────
 
-    def _connect_redis(self, url: str):
+    def _connect_redis(self, url: str) -> Any:
         try:
             import redis as _redis  # optional dependency
             client = _redis.from_url(url, socket_connect_timeout=2, socket_timeout=2)
@@ -359,7 +359,8 @@ class RouteCacheClient:
             import pickle
             raw = self._redis.get(f"synapse:route:{key}")
             if raw:
-                return pickle.loads(raw)  # noqa: S301 — trusted internal cache bytes
+                result: RouteResponse = pickle.loads(raw)  # noqa: S301 — trusted internal cache bytes
+                return result
         except Exception as exc:
             log.warning("route_cache_redis_get_failed: %s", exc)
         return None
@@ -652,9 +653,9 @@ class RedisContextStore:
         self._session_ttl: int = session_ttl or int(
             os.getenv("SYNAPSE_CONTEXT_STORE_SESSION_TTL_SECONDS", "3600")
         )
-        self._redis = self._connect(url)
+        self._redis: Any = self._connect(url)
 
-    def _connect(self, url: str):
+    def _connect(self, url: str) -> Any:
         try:
             import redis as _redis
             pool = _redis.ConnectionPool.from_url(url, max_connections=10)
@@ -674,7 +675,8 @@ class RedisContextStore:
         try:
             if self._redis is None:
                 return None
-            return self._redis.get(self._rkey(session_id, key))  # raw bytes or None
+            result: bytes | None = self._redis.get(self._rkey(session_id, key))
+            return result
         except Exception as exc:
             log.warning("redis_context_store_get_failed: %s", exc)
             return None
@@ -753,9 +755,9 @@ class S3ContextStore:
         self._session_ttl: int = session_ttl or int(
             os.getenv("SYNAPSE_CONTEXT_STORE_SESSION_TTL_SECONDS", "3600")
         )
-        self._s3 = self._connect()
+        self._s3: Any = self._connect()
 
-    def _connect(self):
+    def _connect(self) -> Any:
         try:
             import boto3  # optional dependency
             return boto3.client("s3")
@@ -772,7 +774,8 @@ class S3ContextStore:
             if self._s3 is None:
                 return None
             resp = self._s3.get_object(Bucket=self._bucket, Key=self._s3key(session_id, key))
-            return resp["Body"].read()
+            body: bytes = resp["Body"].read()
+            return body
         except Exception as exc:
             # NoSuchKey is a normal miss — only warn on unexpected errors
             if "NoSuchKey" not in type(exc).__name__:
@@ -851,15 +854,15 @@ def make_context_store() -> InMemoryContextStore | RedisContextStore | S3Context
 # C5 — CalibrationBuffer
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _run_with_timeout(timeout_s: float, fn, *args, **kwargs) -> Any:
+def _run_with_timeout(timeout_s: float, fn: Any, *args: Any, **kwargs: Any) -> Any:
     """Execute fn(*args, **kwargs) in a thread; raise TimeoutError if it stalls."""
     result: list[Any] = []
     exc_box: list[BaseException] = []
 
-    def _target():
+    def _target() -> None:
         try:
             result.append(fn(*args, **kwargs))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             exc_box.append(exc)
 
     t = threading.Thread(target=_target, daemon=True)
@@ -898,7 +901,8 @@ class CalibrationBuffer:
         self._max_size: int = int(os.getenv("SYNAPSE_CAL_BUFFER_MAX", "100"))
         self._flush_interval: float = float(os.getenv("SYNAPSE_CAL_FLUSH_INTERVAL_SECONDS", "5"))
         self._max_retries: int = int(os.getenv("SYNAPSE_CAL_MAX_RETRIES", "3"))
-        self._endpoint_url: str = (endpoint_url or os.getenv("SYNAPSE_REGISTRY_URL", "")).rstrip("/")
+        _raw_url: str | None = endpoint_url or os.getenv("SYNAPSE_REGISTRY_URL")
+        self._endpoint_url: str = (_raw_url or "").rstrip("/")
 
         self._buffer: deque[CalibrationSignal] = deque()
         self._lock = threading.Lock()
@@ -937,7 +941,7 @@ class CalibrationBuffer:
                         self._signals_dropped,
                     )
                 self._buffer.append(signal)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.error("calibration_buffer_submit_failed: %s", exc)
             # swallow — never propagate to the calling pipeline
 
@@ -949,7 +953,7 @@ class CalibrationBuffer:
             time.sleep(self._flush_interval)
             try:
                 self._flush()
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 log.error("calibration_flush_loop_error: %s", exc)
 
     def _flush(self) -> None:
@@ -975,7 +979,7 @@ class CalibrationBuffer:
             try:
                 self._post_batch(batch)
                 return
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 if attempt < self._max_retries - 1:
                     delay = backoff[attempt]
                     log.warning(
@@ -1041,7 +1045,7 @@ class CalibrationBuffer:
                 "calibration_buffer_shutdown: %d signals dropped (2 s timeout exceeded)",
                 dropped,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.error("calibration_buffer_shutdown_error: %s", exc)
 
     # ── Observability ─────────────────────────────────────────────────────────
