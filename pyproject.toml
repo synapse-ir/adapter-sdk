@@ -83,7 +83,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "B017", "S102"]  # allow assert; broad Exception in pytest.raises; exec in test
+"tests/*" = ["S101", "B017", "S102", "I001"]  # allow assert; broad Exception in pytest.raises; exec in test; skip import-sort in tests
 
 [tool.mypy]
 python_version = "3.11"
