@@ -1,13 +1,12 @@
-"""Tests for NERBertAdapter — covers unit behaviour and full AdapterValidator suite."""
-
+"""Tests for NERBertAdapter - covers unit behaviour and full AdapterValidator suite."""
 from __future__ import annotations
 
 import uuid
 from typing import Any
 
 import pytest
-from adapters.ner_bert_adapter import NERBertAdapter
 
+from adapters.ner_bert_adapter import NERBertAdapter
 from synapse_sdk.testing.fixtures import ALL_FIXTURES
 from synapse_sdk.types import (
     CanonicalIR,
