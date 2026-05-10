@@ -28,6 +28,7 @@ from synapse_sdk.tracing import (
 from synapse_sdk.types import (
     BranchRole,
     CanonicalIR,
+    Classification,
     ComplianceEnvelope,
     Domain,
     Entity,
@@ -55,6 +56,7 @@ __all__ = [
     # types
     "BranchRole",
     "CanonicalIR",
+    "Classification",
     "ComplianceEnvelope",
     "Domain",
     "Entity",

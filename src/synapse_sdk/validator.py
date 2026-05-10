@@ -369,6 +369,10 @@ class AdapterValidator:
         if not result.passed:
             raise AdapterValidationError(result)
 
+    def assert_valid_on(self, fixture: CanonicalIR) -> None:
+        """Run validation against a single fixture and raise AdapterValidationError on failure."""
+        AdapterValidator(self._adapter, fixtures=[fixture]).assert_valid()
+
     # ------------------------------------------------------------------
     # Rule implementations (private)
     # ------------------------------------------------------------------

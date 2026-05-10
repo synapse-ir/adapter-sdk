@@ -196,12 +196,15 @@ class TaskHeader(BaseModel):
     quality_floor:     float | None = Field(default=None, ge=0.0, le=1.0)
     session_id:        str | None   = None
     idempotency_key:   str | None   = None
+    query:             str | None   = None
     # G-S01 — W3C Trace Context propagation
     trace_context:     TraceContext | None = None
     # G-S02 — pipeline failure semantics ('abort' preserves current behaviour)
     failure_policy:    FailurePolicy = FailurePolicy.abort
+    # zero-shot classification — candidate labels supplied by the caller
+    candidate_labels:  list[str] | None = None
 
-    @field_validator("session_id", "idempotency_key", mode="before")
+    @field_validator("session_id", "idempotency_key", "query", mode="before")
     @classmethod
     def _no_nulls(cls, v: str | None, info: ValidationInfo) -> str | None:
         if v is not None:
@@ -222,6 +225,20 @@ class Entity(BaseModel):
     @classmethod
     def _no_nulls(cls, v: str, info: ValidationInfo) -> str:
         _reject_null_bytes(v, f"entity.{info.field_name}")
+        return v
+
+
+class Classification(BaseModel):
+    """A classification label and its softmax confidence score."""
+    model_config = ConfigDict(extra="forbid")
+
+    label: str
+    score: float = Field(..., ge=0.0, le=1.0)
+
+    @field_validator("label", mode="before")
+    @classmethod
+    def _no_nulls(cls, v: str) -> str:
+        _reject_null_bytes(v, "classification.label")
         return v
 
 
@@ -250,8 +267,10 @@ class Payload(BaseModel):
     byte_length: int | None = None
 
     # common
-    context_ref: str | None          = None
-    entities:    list[Entity] | None = None
+    context_ref: str | None                  = None
+    entities:    list[Entity] | None          = None
+    labels:      list[Classification] | None  = None
+    score:       float | None                 = Field(default=None, ge=0.0, le=1.0)
 
     @field_validator("modality", mode="before")
     @classmethod
