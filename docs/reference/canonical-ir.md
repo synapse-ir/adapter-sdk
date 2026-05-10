@@ -25,12 +25,12 @@ All six fields are required.
 ### Valid task_type values
 
 `classify` `extract` `generate` `summarize` `embed` `rank` `validate`
-`translate` `score`
+`translate` `score` `transcribe`
 
 ### Valid domain values
 
 `general` `legal` `medical` `finance` `code` `scientific`
-`multilingual` `conversational`
+`multilingual` `conversational` `audio`
 
 ## Payload modalities
 
@@ -54,3 +54,31 @@ Appended by each model's egress adapter. Never modified.
 
 
 Full specification: [github.com/synapse-ir/spec](https://github.com/synapse-ir/spec)
+
+## New in v0.1.1
+
+### Classification type
+
+The `Classification` type is available for classification adapters:
+
+```python
+from synapse_sdk.types import Classification
+
+updated.payload.labels = [
+    Classification(label="positive", score=0.94)
+]
+```
+
+### Payload fields
+
+| Field | Type | Added | Description |
+|-------|------|-------|-------------|
+| labels | list[Classification] | v0.1.1 | Classification results |
+| score | float | v0.1.1 | Relevance score (rank adapters) |
+
+### TaskHeader fields
+
+| Field | Type | Added | Description |
+|-------|------|-------|-------------|
+| candidate_labels | list[str] | v0.1.1 | Labels for zero-shot classification |
+| query | str | v0.1.1 | Query string for rank adapters |

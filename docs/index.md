@@ -23,6 +23,7 @@ pip install synapse-adapter-sdk
 
 ```python
 from synapse_sdk import AdapterBase, CanonicalIR
+from synapse_sdk.types import Classification
 from typing import Any
 
 class MyModelAdapter(AdapterBase):
@@ -32,10 +33,14 @@ class MyModelAdapter(AdapterBase):
     def ingress(self, ir: CanonicalIR) -> dict[str, Any]:
         return { "input": ir.payload.content }
 
-    def egress(self, output: dict, original_ir: CanonicalIR, latency_ms: int) -> CanonicalIR:
-        updated = original_ir.copy()
+    def egress(self, output: Any, original_ir: CanonicalIR, latency_ms: int) -> CanonicalIR:
+        updated = original_ir.clone()
+        from synapse_sdk.types import Classification
+        label = str(output[0].get("label", "")) if output else ""
+        score = float(output[0].get("score", 0.0)) if output else 0.0
+        updated.payload.labels = [Classification(label=label, score=score)]
         updated.provenance.append(self.build_provenance(
-            confidence=output["score"],
+            confidence=score,
             latency_ms=latency_ms,
         ))
         return updated

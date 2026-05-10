@@ -29,8 +29,20 @@ nav:
   - Adapters:
     - Available Adapters: adapters/index.md
     - NER BERT: adapters/ner-bert.md
+    - OpenAI Classifier: adapters/openai-classifier.md
+    - JSL Clinical NER: adapters/ner-clinical.md
+    - Docling: adapters/docling.md
+    - all-MiniLM-L6-v2: adapters/all-minilm.md
+    - BART Large CNN: adapters/bart-large-cnn.md
+    - FinBERT: adapters/finbert.md
+    - opus-mt-en-fr: adapters/opus-mt-en-fr.md
+    - ms-marco-MiniLM-L6-v2: adapters/ms-marco.md
+    - twitter-roberta-sentiment: adapters/twitter-roberta.md
+    - bart-large-mnli: adapters/bart-large-mnli.md
+    - whisper-large-v3: adapters/whisper-large-v3.md
+    - clip-vit-base-patch32: adapters/clip-vit-base-patch32.md
   - Specification: https://github.com/synapse-ir/spec
-  - Contributing: https://github.com/synapse-ir/adapter-sdk/blob/main/DECISIONS.md
+  - Contributing: https://github.com/synapse-ir/adapter-sdk/blob/main/CONTRIBUTING.md
 
 plugins:
   - search

@@ -48,7 +48,23 @@ updated.provenance.append(self.build_provenance(confidence=0.9, latency_ms=laten
 **TASK_HEADER_CARRIED**
 
 ```python
-updated = original_ir.copy()  # carries task_header automatically
+updated = original_ir.clone()  # clone() performs deep copy, carries task_header
 ```
 
 
+
+## Running fixtures in tests
+
+Use assert_valid_on() to run a specific fixture through your adapter
+inside a test suite:
+
+```python
+import pytest
+from synapse_sdk.testing import AdapterValidator
+from synapse_sdk.testing.fixtures import ALL_FIXTURES
+from my_model.my_adapter import MyAdapter
+
+@pytest.mark.parametrize("fixture", ALL_FIXTURES)
+def test_all_fixtures(fixture):
+    AdapterValidator(MyAdapter()).assert_valid_on(fixture)
+```
