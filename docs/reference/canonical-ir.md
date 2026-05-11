@@ -30,7 +30,7 @@ All six fields are required.
 ### Valid domain values
 
 `general` `legal` `medical` `finance` `code` `scientific`
-`multilingual` `conversational` `audio`
+`multilingual` `conversational` `audio` `document` `multimodal` `vision`
 
 ## Payload modalities
 

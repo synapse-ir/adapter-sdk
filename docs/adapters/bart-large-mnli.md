@@ -56,6 +56,8 @@ from synapse_sdk.types import TaskHeader
 task_header = TaskHeader(
     task_type="classify",
     domain="general",
+    priority=2,
+    latency_budget_ms=5000,
     candidate_labels=["sports", "politics", "technology", "finance"],
 )
 ```

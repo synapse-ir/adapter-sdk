@@ -91,6 +91,7 @@ class TaskType(StrEnum):
     validate     = "validate"
     translate    = "translate"  # type: ignore[assignment]  # shadows str.translate
     score        = "score"
+    transcribe   = "transcribe"
 
 
 class Domain(StrEnum):
@@ -102,6 +103,10 @@ class Domain(StrEnum):
     scientific     = "scientific"
     multilingual   = "multilingual"
     conversational = "conversational"
+    audio          = "audio"
+    document       = "document"
+    multimodal     = "multimodal"
+    vision         = "vision"
 
 
 class FailurePolicy(StrEnum):

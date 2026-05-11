@@ -35,7 +35,6 @@ class MyModelAdapter(AdapterBase):
 
     def egress(self, output: Any, original_ir: CanonicalIR, latency_ms: int) -> CanonicalIR:
         updated = original_ir.clone()
-        from synapse_sdk.types import Classification
         label = str(output[0].get("label", "")) if output else ""
         score = float(output[0].get("score", 0.0)) if output else 0.0
         updated.payload.labels = [Classification(label=label, score=score)]

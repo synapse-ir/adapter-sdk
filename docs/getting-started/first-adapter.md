@@ -5,7 +5,9 @@ This guide takes you from zero to a working, validated adapter in under
 
 ## Step 1 - Install the SDK
 
+```bash
 pip install synapse-adapter-sdk
+```
 
 ## Step 2 - Understand the contract
 
@@ -23,14 +25,17 @@ Both functions must be pure: no network calls, no side effects, no persistent st
 
 Each adapter lives in its own folder:
 
-  your_model_name/
+```text
+your_model_name/
     your_model_adapter.py
     README.md
     tests/
-      test_your_model_adapter.py
+        test_your_model_adapter.py
+```
 
 ## Step 4 - Write the adapter
 
+```python
 from __future__ import annotations
 from typing import Any
 from synapse_sdk import AdapterBase, CanonicalIR
@@ -63,6 +68,7 @@ class MyClassifierAdapter(AdapterBase):
             self.build_provenance(confidence=score, latency_ms=latency_ms)
         )
         return updated
+```
 
 Key rules:
 - Always use original_ir.clone(), never original_ir.copy()
@@ -74,6 +80,7 @@ Key rules:
 
 Tests must use mock output only. Never call the real model in tests.
 
+```python
 import pytest
 from synapse_sdk.testing import AdapterValidator
 from synapse_sdk.testing.fixtures import ALL_FIXTURES
@@ -95,13 +102,16 @@ def test_egress_stores_label():
 
 def test_validator_passes():
     AdapterValidator(MyClassifierAdapter()).assert_valid()
+```
 
 ## Step 6 - Run the full audit
 
+```bash
 uv run pytest your_model/tests/ -v --tb=short
 uv run python -c "from synapse_sdk.testing import AdapterValidator; from your_model.your_model_adapter import MyClassifierAdapter; AdapterValidator(MyClassifierAdapter()).assert_valid(); print('Validator: all rules passed')"
 uv run ruff check your_model/
 uv run mypy your_model/your_model_adapter.py
+```
 
 All four must be clean before opening a pull request.
 
