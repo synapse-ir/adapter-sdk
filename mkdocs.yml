@@ -41,6 +41,7 @@ nav:
     - bart-large-mnli: adapters/bart-large-mnli.md
     - whisper-large-v3: adapters/whisper-large-v3.md
     - clip-vit-base-patch32: adapters/clip-vit-base-patch32.md
+    - ClinicalBERT: adapters/clinicalbert.md
   - Specification: https://github.com/synapse-ir/spec
   - Contributing: https://github.com/synapse-ir/adapter-sdk/blob/main/CONTRIBUTING.md
 
