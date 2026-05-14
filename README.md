@@ -1,6 +1,6 @@
 # SYNAPSE Adapter SDK
 
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12785/badge)](https://www.bestpractices.dev/projects/12785)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12785/badge?criteria_level=1)](https://www.bestpractices.dev/projects/12785/silver)
 
 SYNAPSE is a canonical intermediate representation (IR) protocol that lets AI models with incompatible schemas interoperate through a unified adapter interface.
 
