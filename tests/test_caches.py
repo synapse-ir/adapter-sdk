@@ -17,6 +17,8 @@ from synapse_sdk.cache import (
     RouteRequest,
     RouteResponse,
     _route_cache_key,
+    _run_with_timeout,
+    make_context_store,
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -50,6 +52,45 @@ def _route_resp(*model_ids: str) -> RouteResponse:
             for m in model_ids
         ]
     )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Helpers / utilities
+# ──────────────────────────────────────────────────────────────────────────────
+
+class TestRunWithTimeout:
+
+    def test_returns_result_of_fn(self):
+        result = _run_with_timeout(1.0, lambda: 42)
+        assert result == 42
+
+    def test_propagates_exception_from_fn(self):
+        def bad():
+            raise ValueError("oops")
+        with pytest.raises(ValueError, match="oops"):
+            _run_with_timeout(1.0, bad)
+
+    def test_raises_timeout_error_when_fn_stalls(self):
+        import time as _time
+        with pytest.raises(TimeoutError):
+            _run_with_timeout(0.05, _time.sleep, 10)
+
+    def test_returns_none_when_fn_returns_nothing(self):
+        result = _run_with_timeout(1.0, lambda: None)
+        assert result is None
+
+
+class TestMakeContextStore:
+
+    def test_default_backend_returns_in_memory(self, monkeypatch):
+        monkeypatch.delenv("SYNAPSE_CONTEXT_STORE_BACKEND", raising=False)
+        store = make_context_store()
+        assert isinstance(store, InMemoryContextStore)
+
+    def test_memory_backend_explicit(self, monkeypatch):
+        monkeypatch.setenv("SYNAPSE_CONTEXT_STORE_BACKEND", "memory")
+        store = make_context_store()
+        assert isinstance(store, InMemoryContextStore)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -124,6 +165,35 @@ class TestAdapterInstanceCache:
 
 class TestRouteCacheClient:
 
+    def test_l1_lru_eviction_on_set(self):
+        """_l1_set eviction path (lines 341, 343) — fill to max then overflow."""
+        client = RouteCacheClient()
+        client._max = 2
+        req1 = _route_req(task_type="classify", domain="legal")
+        req2 = _route_req(task_type="embed", domain="finance")
+        req3 = _route_req(task_type="generate", domain="medical")
+        client.set(req1, _route_resp("m1"))
+        client.set(req2, _route_resp("m2"))
+        client.set(req3, _route_resp("m3"))  # evicts oldest
+        with client._lock:
+            assert len(client._l1) == 2
+
+    def test_set_existing_key_moves_to_end(self):
+        """_l1_set re-inserts existing key (line 341 branch)."""
+        client = RouteCacheClient()
+        req = _route_req()
+        client.set(req, _route_resp("m1"))
+        client.set(req, _route_resp("m2"))  # update existing key
+        assert client.get(req).candidates[0].model_id == "m2"
+
+    def test_metrics_returns_counters(self):
+        """RouteCacheClient.metrics() (line 386)."""
+        client = RouteCacheClient()
+        m = client.metrics()
+        assert "synapse_route_cache_hits_total" in m
+        assert "synapse_route_cache_misses_total" in m
+        assert "synapse_route_cache_invalidations_total" in m
+
     def test_key_construction_is_deterministic(self):
         req = _route_req()
         assert _route_cache_key(req) == _route_cache_key(req)
@@ -186,6 +256,65 @@ class TestHeartbeatCache:
         time.sleep(0.05)
         assert cache.is_stale("old") is True
 
+    def test_is_stale_true_for_unknown_model(self):
+        """is_stale returns True when model has never been stored (line 458)."""
+        cache = HeartbeatCache()
+        assert cache.is_stale("ghost-model") is True
+
+    def test_store_twice_resets_failure_counter(self):
+        """Second store resets consecutive_failures to 0 (line 444)."""
+        cache = HeartbeatCache()
+        cache.store(HeartbeatResponse(model_id="m", status="available"))
+        with cache._lock:
+            cache._store["m"].consecutive_failures = 3
+        cache.store(HeartbeatResponse(model_id="m", status="available"))
+        with cache._lock:
+            assert cache._store["m"].consecutive_failures == 0
+
+    def test_record_failure_increments_counter(self):
+        """record_failure increments consecutive_failures (lines 463-467)."""
+        cache = HeartbeatCache()
+        cache.store(HeartbeatResponse(model_id="m", status="available"))
+        cache.record_failure("m", "timeout")
+        with cache._lock:
+            assert cache._store["m"].consecutive_failures == 1
+            assert cache._store["m"].last_error == "timeout"
+
+    def test_record_failure_noop_for_unknown_model(self):
+        """record_failure is silent for unknown model (no-op branch)."""
+        cache = HeartbeatCache()
+        cache.record_failure("ghost", "err")  # must not raise
+
+    def test_get_routing_status_all_states(self):
+        """get_routing_status covers fresh/stale/very_stale/unavailable/unknown."""
+        cache = HeartbeatCache(stale_threshold_s=100, drop_threshold_s=200)
+        assert cache.get_routing_status("ghost") == "unknown"
+
+        cache.store(HeartbeatResponse(model_id="m", status="available"))
+        assert cache.get_routing_status("m") == "fresh"
+
+        with cache._lock:
+            cache._store["m"].consecutive_failures = 3
+        assert cache.get_routing_status("m") == "unavailable"
+
+        cache2 = HeartbeatCache(stale_threshold_s=0.01, drop_threshold_s=100)
+        cache2.store(HeartbeatResponse(model_id="m2", status="available"))
+        time.sleep(0.05)
+        assert cache2.get_routing_status("m2") == "stale"
+
+        cache3 = HeartbeatCache(stale_threshold_s=0.01, drop_threshold_s=0.02)
+        cache3.store(HeartbeatResponse(model_id="m3", status="available"))
+        time.sleep(0.05)
+        assert cache3.get_routing_status("m3") == "very_stale"
+
+    def test_metrics(self):
+        """HeartbeatCache.metrics() covers lines 485-493."""
+        cache = HeartbeatCache(stale_threshold_s=100, drop_threshold_s=200)
+        cache.store(HeartbeatResponse(model_id="m1", status="available"))
+        m = cache.metrics()
+        assert "synapse_heartbeat_stale_count" in m
+        assert "synapse_heartbeat_unavailable_count" in m
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # C4 — InMemoryContextStore
@@ -219,6 +348,25 @@ class TestInMemoryContextStore:
         assert store.get("sess-a", "k1") is None
         assert store.get("sess-a", "k2") is None
         assert store.get("sess-b", "k3") == b"v3"  # unaffected session
+
+    def test_lru_session_eviction(self):
+        """_evict_if_needed drops oldest session when max_sessions is exceeded (line 632)."""
+        store = InMemoryContextStore(max_sessions=2)
+        store.set("s1", "k", b"v")
+        store.set("s2", "k", b"v")
+        store.set("s3", "k", b"v")  # triggers eviction of s1
+        with store._lock:
+            assert "s1" not in store._data
+            assert "s3" in store._data
+
+    def test_ttl_expiry_removes_key(self):
+        """Expired key returns None (line 576-577 in get)."""
+        store = InMemoryContextStore(session_ttl=3600)
+        store.set("sess", "k", b"v", ttl_seconds=1)
+        # Force expiry by setting the stored expiry in the past
+        with store._lock:
+            store._data["sess"]["k"] = (b"v", 0.0)
+        assert store.get("sess", "k") is None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -260,3 +408,13 @@ class TestCalibrationBuffer:
         buf.submit(_signal())
         with buf._lock:
             assert len(buf._buffer) == 0
+
+    def test_metrics(self):
+        """CalibrationBuffer.metrics() covers lines 1056-1058."""
+        buf = CalibrationBuffer()
+        buf.submit(_signal())
+        m = buf.metrics()
+        assert "synapse_cal_buffer_size" in m
+        assert m["synapse_cal_buffer_size"] >= 1
+        assert "synapse_cal_signals_dropped_total" in m
+        assert "synapse_cal_flush_failures_total" in m
