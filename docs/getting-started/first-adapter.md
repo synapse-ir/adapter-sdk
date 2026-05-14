@@ -93,11 +93,25 @@ def test_all_fixtures(fixture):
 
 
 def test_egress_stores_label():
-    adapter = MyClassifierAdapter()
-    # build a minimal CanonicalIR for testing
-    # see the SDK testing docs for helpers
+    import uuid
+    from synapse_sdk.types import CanonicalIR, TaskHeader, Payload, TaskType, Domain
+
+    ir = CanonicalIR(
+        ir_version="1.0.0",
+        message_id=str(uuid.uuid4()),
+        task_header=TaskHeader(
+            task_type=TaskType.classify,
+            domain=Domain.general,
+            priority=2,
+            latency_budget_ms=500,
+        ),
+        payload=Payload(modality="text", content="This product is great!"),
+    )
     mock_output = [{"label": "positive", "score": 0.91}]
-    # ... assert payload.labels[0].label == "positive"
+    result = MyClassifierAdapter().egress(mock_output, ir, latency_ms=35)
+    assert result.payload.labels is not None
+    assert result.payload.labels[0].label == "positive"
+    assert result.payload.labels[0].score == pytest.approx(0.91)
 
 
 def test_validator_passes():
