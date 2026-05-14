@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2024 Chris Widmer
+# SPDX-License-Identifier: MIT
 """synapse_sdk.testing — convenience re-exports for test/CI usage (§2.2.4, §9 G-S06)."""
 
 from synapse_sdk.testing.fixtures import (

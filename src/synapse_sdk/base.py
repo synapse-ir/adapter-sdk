@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2024 Chris Widmer
+# SPDX-License-Identifier: MIT
 """AdapterBase — abstract base class for all SYNAPSE adapters (§2.1, §2.2)."""
 
 from __future__ import annotations

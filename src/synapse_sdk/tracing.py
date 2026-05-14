@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2024 Chris Widmer
+# SPDX-License-Identifier: MIT
 """G-S01 Distributed Tracing — W3C Trace Context propagation + optional OTel spans.
 
 Design goals

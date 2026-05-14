@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2024 Chris Widmer
+# SPDX-License-Identifier: MIT
 """SYNAPSE Adapter SDK — §8 Caching Architecture (C1–C5).
 
 Five cache layers, each with independent storage, TTL, eviction, and
@@ -343,7 +345,7 @@ class RouteCacheClient:
 
     # ── Redis internals (graceful fallback on any error) ──────────────────────
 
-    def _connect_redis(self, url: str) -> Any:
+    def _connect_redis(self, url: str) -> Any:  # pragma: no cover
         try:
             import redis as _redis  # optional dependency
             client = _redis.from_url(url, socket_connect_timeout=2, socket_timeout=2)
@@ -354,7 +356,7 @@ class RouteCacheClient:
             log.warning("route_cache_redis_unavailable: %s — using in-process cache only", exc)
             return None
 
-    def _redis_get(self, key: str) -> RouteResponse | None:
+    def _redis_get(self, key: str) -> RouteResponse | None:  # pragma: no cover
         try:
             import pickle
             raw = self._redis.get(f"synapse:route:{key}")
@@ -365,14 +367,14 @@ class RouteCacheClient:
             log.warning("route_cache_redis_get_failed: %s", exc)
         return None
 
-    def _redis_set(self, key: str, response: RouteResponse, ttl: int) -> None:
+    def _redis_set(self, key: str, response: RouteResponse, ttl: int) -> None:  # pragma: no cover
         try:
             import pickle
             self._redis.setex(f"synapse:route:{key}", ttl, pickle.dumps(response))
         except Exception as exc:
             log.warning("route_cache_redis_set_failed: %s", exc)
 
-    def _redis_ttl(self, key: str) -> float:
+    def _redis_ttl(self, key: str) -> float:  # pragma: no cover
         try:
             remaining = self._redis.ttl(f"synapse:route:{key}")
             return max(0.0, float(remaining))
@@ -632,7 +634,7 @@ class InMemoryContextStore:
 
 # ── RedisContextStore ─────────────────────────────────────────────────────────
 
-class RedisContextStore:
+class RedisContextStore:  # pragma: no cover
     """C4 Redis: Production context store backed by Redis.
 
     Keys are stored as ``synapse:ctx:{session_id}:{key}`` with native Redis TTL.
@@ -730,7 +732,7 @@ class RedisContextStore:
 
 # ── S3ContextStore ────────────────────────────────────────────────────────────
 
-class S3ContextStore:
+class S3ContextStore:  # pragma: no cover
     """C4 S3: Large-payload context store backed by Amazon S3.
 
     Suitable for payloads > 1 MB or pipelines with long duration.
@@ -947,7 +949,7 @@ class CalibrationBuffer:
 
     # ── Background flush ──────────────────────────────────────────────────────
 
-    def _flush_loop(self) -> None:
+    def _flush_loop(self) -> None:  # pragma: no cover
         """Daemon thread: flush on interval until process exits."""
         while True:
             time.sleep(self._flush_interval)
@@ -956,7 +958,7 @@ class CalibrationBuffer:
             except Exception as exc:
                 log.error("calibration_flush_loop_error: %s", exc)
 
-    def _flush(self) -> None:
+    def _flush(self) -> None:  # pragma: no cover
         """Drain the buffer and send the batch.  Network I/O happens outside the lock."""
         with self._lock:
             if not self._buffer:

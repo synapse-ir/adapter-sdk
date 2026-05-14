@@ -26,28 +26,28 @@ from synapse_sdk.cache import RouteRequest
 # ---------------------------------------------------------------------------
 
 def _manifest(**overrides) -> CapabilityManifest:
-    defaults = dict(
-        model_id="test/model",
-        adapter_version="1.0.0",
-        task_types=["classify"],
-        domains=["general"],
-        compliance_tags=[],
-        latency_p50_ms=100,
-        latency_p99_ms=200,
-        cost_per_1k_tokens=None,
-        quality_score=0.8,
-        available=True,
-    )
+    defaults: dict = {
+        "model_id": "test/model",
+        "adapter_version": "1.0.0",
+        "task_types": ["classify"],
+        "domains": ["general"],
+        "compliance_tags": [],
+        "latency_p50_ms": 100,
+        "latency_p99_ms": 200,
+        "cost_per_1k_tokens": None,
+        "quality_score": 0.8,
+        "available": True,
+    }
     defaults.update(overrides)
     return CapabilityManifest(**defaults)
 
 
 def _request(**overrides) -> RouteRequest:
-    defaults = dict(
-        task_type="classify",
-        domain="general",
-        latency_budget_ms=500,
-    )
+    defaults: dict = {
+        "task_type": "classify",
+        "domain": "general",
+        "latency_budget_ms": 500,
+    }
     defaults.update(overrides)
     return RouteRequest(**defaults)
 
@@ -228,7 +228,9 @@ def test_manifest_loader_hot_reload(tmp_path):
 
 def test_local_router_returns_candidates(tmp_path):
     p = tmp_path / "m.json"
-    _write_manifests(p, [{"model_id": "a/b", "adapter_version": "1.0.0", "task_types": ["classify"], "domains": ["general"]}])
+    _write_manifests(p, [
+        {"model_id": "a/b", "adapter_version": "1.0.0", "task_types": ["classify"], "domains": ["general"]},
+    ])
     loader = LocalManifestLoader(str(p))
     router = LocalRouter(loader)
     resp = router.route(_request())
@@ -249,8 +251,10 @@ def test_local_router_filters_unavailable(tmp_path):
 def test_local_router_sorts_by_score(tmp_path):
     p = tmp_path / "m.json"
     _write_manifests(p, [
-        {"model_id": "low/q", "adapter_version": "1.0.0", "task_types": ["classify"], "domains": ["general"], "quality_score": 0.5},
-        {"model_id": "high/q", "adapter_version": "1.0.0", "task_types": ["classify"], "domains": ["general"], "quality_score": 0.9},
+        {"model_id": "low/q", "adapter_version": "1.0.0", "task_types": ["classify"],
+         "domains": ["general"], "quality_score": 0.5},
+        {"model_id": "high/q", "adapter_version": "1.0.0", "task_types": ["classify"],
+         "domains": ["general"], "quality_score": 0.9},
     ])
     loader = LocalManifestLoader(str(p))
     router = LocalRouter(loader)
@@ -260,7 +264,10 @@ def test_local_router_sorts_by_score(tmp_path):
 
 def test_local_router_respects_limit(tmp_path):
     p = tmp_path / "m.json"
-    models = [{"model_id": f"m/{i}", "adapter_version": "1.0.0", "task_types": ["classify"], "domains": ["general"]} for i in range(10)]
+    models = [
+        {"model_id": f"m/{i}", "adapter_version": "1.0.0", "task_types": ["classify"], "domains": ["general"]}
+        for i in range(10)
+    ]
     _write_manifests(p, models)
     loader = LocalManifestLoader(str(p))
     router = LocalRouter(loader)

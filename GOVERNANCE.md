@@ -124,6 +124,10 @@ The project adopts the Contributor Covenant v2.1 as its Code of Conduct. Reports
 
 Security vulnerabilities should be reported privately, not through public GitHub issues. See SECURITY.md for the full vulnerability reporting process. Security issues are handled with priority and reporters are credited in release notes unless they request otherwise.
 
+### Two-factor authentication
+
+All Maintainers and anyone with write access to any repository in the `synapse-ir` GitHub organisation **must** enable two-factor authentication on their GitHub account. The organisation enforces this at the settings level. Only cryptographic methods are accepted: a hardware security key (FIDO2/WebAuthn) or a TOTP authenticator app. SMS-only 2FA does not meet this requirement. Accounts that do not satisfy the requirement will be removed from the organisation until compliance is confirmed.
+
 ---
 
 ## Relationship with LF AI & Data Foundation

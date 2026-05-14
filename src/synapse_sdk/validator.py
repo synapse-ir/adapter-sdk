@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2024 Chris Widmer
+# SPDX-License-Identifier: MIT
 """AdapterValidator — runs all 13 §2.4 validation rules against an adapter."""
 
 from __future__ import annotations

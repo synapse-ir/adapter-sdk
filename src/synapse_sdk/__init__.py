@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2024 Chris Widmer
+# SPDX-License-Identifier: MIT
 """synapse-adapter-sdk public API."""
 
 __version__ = "0.1.1"

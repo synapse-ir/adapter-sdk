@@ -78,3 +78,21 @@ The SDK does not operate a server, handle authentication tokens, or process untr
 | Malformed / oversized input | Pydantic field validation + size limits | `CanonicalIR` constructor |
 | Secrets in transit | No credential fields in IR schema | Structural (type system) |
 | Dependency compromise | `uv.lock` pinning + Dependabot | CI and dependency management |
+
+---
+
+## Security review
+
+**Date:** May 2026  
+**Scope:** Full review of `src/synapse_sdk/` (validator, type system, cache layers, tracing, CLI, local-mode) and all CI/release infrastructure  
+**Reviewer:** Chris Widmer (Founding Maintainer), with independent review of the threat model and control set as part of the OpenSSF Best Practices Gold badge assessment process  
+
+The review examined each of the four threat categories above and confirmed that the five controls are correctly implemented and enforced. No critical or high-severity issues were identified. The following observations were recorded:
+
+| Finding | Severity | Resolution |
+|---------|----------|------------|
+| `CalibrationBuffer` uses `urllib.request.urlopen` for calibration endpoint calls — intentional and limited to the SDK process, not adapter code | Informational | Documented in `S310` ruff ignore; `NO_NETWORK_CALLS` rule applies to adapter code only, not SDK internals |
+| `payload.data` accepts arbitrary bytes — no content inspection | Informational | By design; SDK never deserialises or executes payload data |
+| Signed releases use sigstore attestations via PyPI Trusted Publishing | Positive control | Verified in `.github/workflows/release.yml` |
+
+This document will be updated after each major release cycle or when the threat model changes. A third-party security audit is planned as part of the LF AI & Data Foundation sandbox application process.

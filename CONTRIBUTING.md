@@ -53,6 +53,8 @@ uv build
 - Add or improve tests
 - Report issues at https://github.com/synapse-ir/adapter-sdk/issues
 
+Issues labelled **`good first issue`** are intentionally scoped to be approachable for new contributors. Issues labelled **`help wanted`** are where additional hands are most needed. Both labels are searchable at https://github.com/synapse-ir/adapter-sdk/labels.
+
 ## Requirements for acceptable contributions
 
 All pull requests must meet these requirements before they will be merged:
@@ -84,6 +86,20 @@ All pull requests must meet these requirements before they will be merged:
    and which model it wraps
 6. A maintainer will review within 14 days
 
+### Code review standards
+
+Every pull request must receive at least one approval from a Maintainer who is not the PR author before merging. Reviewers verify:
+
+- All CI checks pass (ruff, mypy, pytest with ≥80% branch coverage)
+- New functionality includes tests and does not reduce coverage
+- Public API changes have docstrings and type hints
+- Adapter contributions pass `synapse-validate --all-fixtures`
+- The DCO sign-off is present on every commit in the branch
+- No secrets, credentials, or personally identifiable information are introduced
+- Code matches the coding standards in this document
+
+Reviewers leave comments using the GitHub review interface. A PR may not be merged until all blocking comments are resolved and at least one approving review is recorded. The PR author may not self-approve. See GOVERNANCE.md for the full decision process.
+
 ## Coding standards
 
 - Python 3.11 or higher required
@@ -91,6 +107,12 @@ All pull requests must meet these requirements before they will be merged:
 - Type hints are required on all function signatures
 - Adapter functions must be pure — no network calls, no side effects,
   no persistent state (enforced by the NO_NETWORK_CALLS validator rule)
+
+## Two-factor authentication
+
+Maintainers with write access to any repository in the `synapse-ir` GitHub organisation **must** enable two-factor authentication (2FA) on their GitHub account. The organisation enforces this requirement at the settings level; accounts without 2FA will be removed from the organisation until the requirement is met.
+
+Use a cryptographic 2FA method — a hardware security key (FIDO2/WebAuthn) or a TOTP authenticator app. SMS-only 2FA is not accepted.
 
 ## Code of Conduct
 

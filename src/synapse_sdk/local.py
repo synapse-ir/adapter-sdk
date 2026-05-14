@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2024 Chris Widmer
+# SPDX-License-Identifier: MIT
 """SYNAPSE Adapter SDK — §G-S05 Local Development Mode.
 
 When SYNAPSE_LOCAL_MODE=true the SDK replaces external registry calls with:

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2024 Chris Widmer
+# SPDX-License-Identifier: MIT
 """Canonical IR types for the SYNAPSE adapter SDK (§1, G-C02, G-C05, G-C08)."""
 
 from __future__ import annotations

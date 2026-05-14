@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2024 Chris Widmer
+# SPDX-License-Identifier: MIT
 """synapse-validate — CLI for validating SYNAPSE adapters against standard fixtures.
 
 Usage examples::

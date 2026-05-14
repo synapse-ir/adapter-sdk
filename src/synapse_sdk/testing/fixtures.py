@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2024 Chris Widmer
+# SPDX-License-Identifier: MIT
 """Standard fixture library — §9 G-S06.
 
 All 20 representative IR payloads used to validate adapter implementations.
