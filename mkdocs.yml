@@ -42,7 +42,12 @@ nav:
     - whisper-large-v3: adapters/whisper-large-v3.md
     - clip-vit-base-patch32: adapters/clip-vit-base-patch32.md
     - ClinicalBERT: adapters/clinicalbert.md
+  - Design:
+    - Architecture: architecture.md
+    - Security Requirements: security.md
+    - Assurance Case: assurance.md
   - Specification: https://github.com/synapse-ir/spec
+  - Roadmap: https://github.com/synapse-ir/adapter-sdk/blob/main/ROADMAP.md
   - Contributing: https://github.com/synapse-ir/adapter-sdk/blob/main/CONTRIBUTING.md
 
 plugins:
