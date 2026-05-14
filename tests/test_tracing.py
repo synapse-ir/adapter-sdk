@@ -298,3 +298,126 @@ class TestAdapterSpanOtelDisabled:
             entered = True
             _ = span
         assert entered
+
+
+# ---------------------------------------------------------------------------
+# _get_otel_tracer — OTel enabled but opentelemetry not installed
+# ---------------------------------------------------------------------------
+
+class TestGetOtelTracer:
+    """Exercise _get_otel_tracer() import-error and cache branches."""
+
+    def _reset(self, monkeypatch):
+        import synapse_sdk.tracing as mod
+        monkeypatch.setattr(mod, "_OTEL_ENABLED", True)
+        monkeypatch.setattr(mod, "_otel_tracer", None)
+        monkeypatch.setattr(mod, "_otel_import_attempted", False)
+        return mod
+
+    def test_import_error_returns_none(self, monkeypatch):
+        mod = self._reset(monkeypatch)
+        result = mod._get_otel_tracer()
+        assert result is None
+        assert mod._otel_import_attempted is True
+
+    def test_already_attempted_returns_none_without_retry(self, monkeypatch):
+        mod = self._reset(monkeypatch)
+        mod._get_otel_tracer()          # first call sets _otel_import_attempted
+        result = mod._get_otel_tracer() # second call — fast-path return
+        assert result is None
+
+    def test_cached_tracer_returned_immediately(self, monkeypatch):
+        import synapse_sdk.tracing as mod
+        sentinel = object()
+        monkeypatch.setattr(mod, "_OTEL_ENABLED", True)
+        monkeypatch.setattr(mod, "_otel_tracer", sentinel)
+        assert mod._get_otel_tracer() is sentinel
+
+
+# ---------------------------------------------------------------------------
+# adapter_span — OTel enabled, opentelemetry mocked
+# ---------------------------------------------------------------------------
+
+class TestAdapterSpanOtelEnabled:
+    """Exercise the OTel code paths inside adapter_span()."""
+
+    def test_yields_none_when_import_fails_inside_span(self, monkeypatch):
+        """_get_otel_tracer returns a mock but opentelemetry is not installed —
+        the inner import raises ModuleNotFoundError caught by except Exception."""
+        import synapse_sdk.tracing as mod
+        monkeypatch.setattr(mod, "_get_otel_tracer", lambda: object())
+
+        ir = _make_ir()
+        with mod.adapter_span(ir, "m", "1.0.0", "ingress") as span:
+            assert span is None
+
+    def test_yields_span_with_mocked_otel(self, monkeypatch):
+        """Happy path: tracer and propagator both mocked."""
+        import sys
+        from unittest.mock import MagicMock
+        import synapse_sdk.tracing as mod
+
+        mock_span = MagicMock()
+        mock_tracer = MagicMock()
+        cm = MagicMock()
+        cm.__enter__ = MagicMock(return_value=mock_span)
+        cm.__exit__ = MagicMock(return_value=False)
+        mock_tracer.start_as_current_span.return_value = cm
+
+        monkeypatch.setattr(mod, "_get_otel_tracer", lambda: mock_tracer)
+
+        mock_propagator = MagicMock()
+        mock_propagator.return_value.extract.return_value = {}
+        otel_mod = MagicMock()
+        otel_mod.TraceContextTextMapPropagator = mock_propagator
+
+        with monkeypatch.context() as m:
+            m.setitem(sys.modules, "opentelemetry", MagicMock())
+            m.setitem(sys.modules, "opentelemetry.trace", MagicMock())
+            m.setitem(sys.modules, "opentelemetry.trace.propagation", MagicMock())
+            m.setitem(
+                sys.modules,
+                "opentelemetry.trace.propagation.tracecontext",
+                otel_mod,
+            )
+            ir = _make_ir()
+            with mod.adapter_span(ir, "m", "1.0.0", "egress", latency_ms=42, confidence=0.9) as span:
+                assert span is mock_span
+
+    def test_yields_span_with_trace_context(self, monkeypatch):
+        """Covers the branch where ir.task_header.trace_context is not None."""
+        import sys
+        from unittest.mock import MagicMock
+        import synapse_sdk.tracing as mod
+
+        mock_span = MagicMock()
+        mock_tracer = MagicMock()
+        cm = MagicMock()
+        cm.__enter__ = MagicMock(return_value=mock_span)
+        cm.__exit__ = MagicMock(return_value=False)
+        mock_tracer.start_as_current_span.return_value = cm
+
+        monkeypatch.setattr(mod, "_get_otel_tracer", lambda: mock_tracer)
+
+        mock_propagator = MagicMock()
+        mock_propagator.return_value.extract.return_value = {}
+        otel_mod = MagicMock()
+        otel_mod.TraceContextTextMapPropagator = mock_propagator
+
+        tc = TraceContext(
+            traceparent=_VALID_TRACEPARENT,
+            tracestate="vendor=abc",
+        )
+        ir = _make_ir(trace_context=tc)
+
+        with monkeypatch.context() as m:
+            m.setitem(sys.modules, "opentelemetry", MagicMock())
+            m.setitem(sys.modules, "opentelemetry.trace", MagicMock())
+            m.setitem(sys.modules, "opentelemetry.trace.propagation", MagicMock())
+            m.setitem(
+                sys.modules,
+                "opentelemetry.trace.propagation.tracecontext",
+                otel_mod,
+            )
+            with mod.adapter_span(ir, "m", "1.0.0", "ingress") as span:
+                assert span is mock_span

@@ -85,6 +85,21 @@ class TestAdapterInstanceCache:
         AdapterInstanceCache.invalidate("mdl", "1.0.0")
         assert "mdl:1.0.0" not in AdapterInstanceCache._cache
 
+    def test_get_returns_cached_instance_on_second_call(self, clean_adapter_cache):
+        sentinel = object()
+        AdapterInstanceCache.register("mdl", "1.0.0", lambda: sentinel)
+        first = AdapterInstanceCache.get("mdl", "1.0.0")
+        second = AdapterInstanceCache.get("mdl", "1.0.0")  # cache hit path
+        assert first is second is sentinel
+
+    def test_metrics_returns_counters(self, clean_adapter_cache):
+        AdapterInstanceCache.register("mdl", "1.0.0", lambda: object())
+        AdapterInstanceCache.get("mdl", "1.0.0")  # miss
+        AdapterInstanceCache.get("mdl", "1.0.0")  # hit
+        m = AdapterInstanceCache.metrics()
+        assert m["synapse_adapter_cache_hits_total"] >= 1
+        assert m["synapse_adapter_cache_misses_total"] >= 1
+
     def test_lru_eviction_drops_oldest_entry(self, clean_adapter_cache):
         original_max = AdapterInstanceCache._max
         AdapterInstanceCache._max = 2
@@ -139,6 +154,11 @@ class TestRouteCacheClient:
 
         client.invalidate_model("target-model")
         assert client.get(req) is None
+
+    def test_l1_entry_remaining_ttl_positive(self):
+        from synapse_sdk.cache import _L1Entry
+        entry = _L1Entry(_route_resp("m"), ttl=60)
+        assert entry.remaining_ttl() > 0
 
 
 # ──────────────────────────────────────────────────────────────────────────────
