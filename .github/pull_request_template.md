@@ -6,6 +6,7 @@ Closes #
 
 ## Checklist
 
+- [ ] All commits are signed off (`git commit -s`) for DCO compliance
 - [ ] Ruff passes: `uv run ruff check .`
 - [ ] Mypy passes: `uv run mypy src/`
 - [ ] All tests pass: `uv run pytest tests/`

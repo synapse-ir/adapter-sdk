@@ -3,6 +3,48 @@
 Thank you for your interest in contributing. This document explains how
 to contribute and what is required for a contribution to be accepted.
 
+## Developer Certificate of Origin (DCO)
+
+Every commit to this repository must carry a DCO sign-off. By adding the sign-off
+you certify that you have the right to submit the contribution under the MIT license
+and that you accept the [Developer Certificate of Origin v1.1](https://developercertificate.org/).
+
+Add the sign-off with the `-s` flag:
+
+```bash
+git commit -s -m "feat: your commit message"
+```
+
+This adds `Signed-off-by: Your Name <you@example.com>` to the commit body. The DCO
+check GitHub Action will block the PR if any commit in the branch is missing a sign-off.
+If you forgot to sign off an existing commit, amend it:
+
+```bash
+git commit --amend -s --no-edit
+git push --force-with-lease
+```
+
+## Reproducible builds
+
+The project uses `uv` for dependency management. All direct and transitive dependencies
+are pinned in `uv.lock` (committed to the repository). To reproduce the exact build
+environment used in CI:
+
+```bash
+uv sync --frozen --all-extras --dev
+```
+
+`--frozen` fails if `uv.lock` is out of date, ensuring the installed environment exactly
+matches the lock file. Never use `uv sync` without `--frozen` in release or verification
+contexts.
+
+To verify a release wheel:
+
+```bash
+uv build
+# The .whl in dist/ is reproducible given the same Python version and uv.lock
+```
+
 ## Ways to contribute
 
 - Write a new adapter for a model not yet in the ecosystem
