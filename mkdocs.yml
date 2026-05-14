@@ -1,5 +1,5 @@
 site_name: SYNAPSE Adapter SDK
-site_url: https://synapse-ir.github.io/adapter-sdk
+site_url: https://synapse-adapter-sdk.netlify.app
 site_description: The intelligence layer above the AI protocol layer
 repo_url: https://github.com/synapse-ir/adapter-sdk
 repo_name: synapse-ir/adapter-sdk
