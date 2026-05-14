@@ -27,6 +27,9 @@ jobs:
       - name: Build docs
         run: mkdocs build --strict
 
+      - name: Copy Netlify headers into build output
+        run: cp docs/_headers site/_headers
+
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v3.0
         with:
